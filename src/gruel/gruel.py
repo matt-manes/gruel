@@ -79,15 +79,11 @@ class Gruel:
 
     def prescrape_chores(self):
         """Chores to do before scraping."""
-        self.timer.start()
-        self.logger.info("Scrape started.")
+        ...
 
     def postscrape_chores(self):
         """Chores to do after scraping."""
-        self.timer.stop()
-        self.logger.info(
-            f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
-        )
+        ...
 
     def get_parsable_items(self) -> list[ParsableItem]:
         """Get relevant webpages and extract raw data that needs to be parsed.
@@ -123,6 +119,8 @@ class Gruel:
         4. store items
         5. postscrape chores"""
         try:
+            self.timer.start()
+            self.logger.info("Scrape started.")
             self.prescrape_chores()
             try:
                 parsable_items = self.get_parsable_items()
@@ -133,6 +131,9 @@ class Gruel:
                     parsed_item = self.parse_item(item)
                     if parsed_item:
                         self.store_item(parsed_item)
+                self.logger.info(
+                    f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
+                )
         except Exception:
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")
         self.postscrape_chores()
