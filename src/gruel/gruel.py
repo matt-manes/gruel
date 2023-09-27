@@ -45,25 +45,33 @@ class Gruel:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-    def get_page(self, url: str, headers: dict[str, str] = {}) -> requests.Response:
+    def get_page(
+        self, url: str, method: str = "get", headers: dict[str, str] = {}
+    ) -> requests.Response:
         """Request `url` and return the `requests.Response` object.
 
         By default, the only header sent is a randomized user agent string.
 
         This can be overridden by supplying a user agent in the `headers` param."""
         try:
-            return requests.get(url, headers={"User-Agent": get_agent()} | headers)
+            return requests.request(
+                method, url, headers={"User-Agent": get_agent()} | headers
+            )
         except Exception as e:
             time.sleep(1)
-            return requests.get(url, headers={"User-Agent": get_agent()} | headers)
+            return requests.request(
+                method, url, headers={"User-Agent": get_agent()} | headers
+            )
 
     def as_soup(self, response: requests.Response) -> BeautifulSoup:
         """Returns the text content of `response` as a `BeautifulSoup` object."""
         return BeautifulSoup(response.text, "html.parser")
 
-    def get_soup(self, url: str, headers: dict[str, str] = {}) -> BeautifulSoup:
+    def get_soup(
+        self, url: str, method: str = "get", headers: dict[str, str] = {}
+    ) -> BeautifulSoup:
         """Request `url` with `headers` and return `BeautifulSoup` object."""
-        return self.as_soup(self.get_page(url, headers))
+        return self.as_soup(self.get_page(url, method, headers))
 
     def clean_string(self, text: str) -> str:
         """Strip `\\n\\r\\t` and whitespace from `text`."""
