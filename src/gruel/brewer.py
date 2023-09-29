@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from gruel import Gruel
 from pathier import Pathier, Pathish
 import importlib
-from printbuddies import ProgBar
+from printbuddies import ProgBar, PoolBar
 import inspect
 from typing import Any
 import time
@@ -134,22 +134,8 @@ class Brewer:
         """Run the `scrape()` method for each scraper in `scrapers`.
 
         Execution is multithreaded."""
-        num_scrapers = len(scrapers)
-        with ProgBar(num_scrapers) as bar:
-            with ThreadPoolExecutor() as executor:
-                threads = [executor.submit(scraper().scrape) for scraper in scrapers]  # type: ignore
-                while (
-                    num_complete := len([thread for thread in threads if thread.done()])
-                ) < num_scrapers:
-                    bar.display(
-                        prefix=f"{bar.runtime}",
-                        counter_override=num_complete,
-                    )
-                    time.sleep(1)
-            bar.display(
-                prefix=f"{bar.runtime}",
-                counter_override=num_complete,
-            )
+        pool = PoolBar("thread", [scraper().scrape for scraper in scrapers])  # type: ignore
+        pool.execute()
 
     def brew(self):
         """Execute pipeline.
