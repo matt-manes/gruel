@@ -9,6 +9,7 @@ from typing import Any
 import time
 import logging
 import argparse
+import sys
 
 
 class Brewer:
@@ -86,9 +87,12 @@ class Brewer:
         ]
         files = younotyou(files, exclude_patterns=self.file_exclude_patterns)
         modules = []
+        self._module_names = []
         for file in files:
             try:
-                modules.append(importlib.import_module(Pathier(file).stem))
+                module_name = Pathier(file).stem
+                self._module_names.append(module_name)
+                modules.append(importlib.import_module(module_name))
             except Exception as e:
                 ...
         gruels = [
@@ -104,6 +108,12 @@ class Brewer:
             )
         )
         return gruels
+
+    def pop_modules(self):
+        """Unload modules."""
+        for module in self._module_names:
+            sys.modules.pop(module)
+        self._module_names = []
 
     def get_bases(self, object: Any) -> list[Any]:
         """Returns a recursive list of all the classes `object` inherits from."""
@@ -128,7 +138,7 @@ class Brewer:
 
     def postscrape_chores(self):
         """Override to add any tasks to be done after running the scrapers."""
-        ...
+        self.pop_modules()
 
     def scrape(self, scrapers: list[Gruel]):
         """Run the `scrape()` method for each scraper in `scrapers`.
