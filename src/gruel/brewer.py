@@ -1,15 +1,17 @@
-from younotyou import younotyou
-from concurrent.futures import ThreadPoolExecutor
-from gruel import Gruel
-from pathier import Pathier, Pathish
-import importlib
-from printbuddies import ProgBar, PoolBar
-import inspect
-from typing import Any
-import time
-import logging
 import argparse
+import importlib
+import importlib.machinery
+import importlib.util
+import inspect
+import logging
 import sys
+from typing import Any
+
+from pathier import Pathier, Pathish
+from printbuddies import PoolBar
+from younotyou import younotyou
+
+from gruel import Gruel
 
 
 class Brewer:
@@ -76,7 +78,6 @@ class Brewer:
         `recursive`: Whether the search should be recursive or not.
 
         >>> load_scrapers("getToTheGig/scrapers", ["VenueScraper"], ["*.py"], ["*template*", "*giggruel*"])"""
-        self.scan_path.add_to_PATH()
         globber = self.scan_path.glob
         if self.recursive:
             globber = self.scan_path.rglob
@@ -92,7 +93,10 @@ class Brewer:
             try:
                 module_name = Pathier(file).stem
                 self._module_names.append(module_name)
-                modules.append(importlib.import_module(module_name))
+                module = importlib.machinery.SourceFileLoader(
+                    module_name, file
+                ).load_module()
+                modules.append(module)
             except Exception as e:
                 ...
         gruels = [
