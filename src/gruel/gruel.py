@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
 from pathier import Pathier
 from whosyouragent import get_agent
+from printbuddies import ProgBar
 
 ParsableItem = dict | str | Tag
 
@@ -111,7 +112,7 @@ class Gruel:
         """Store `item`."""
         raise NotImplementedError
 
-    def scrape(self):
+    def scrape(self, parse_items_prog_bar_display: bool = False):
         """Run the scraper:
         1. prescrape chores
         2. get parsable items
@@ -127,10 +128,13 @@ class Gruel:
             except Exception:
                 self.logger.exception(f"Error in {self.name}:get_parsable_items().")
             else:
-                for item in parsable_items:
-                    parsed_item = self.parse_item(item)
-                    if parsed_item:
-                        self.store_item(parsed_item)
+                with ProgBar(len(parsable_items)) as bar:
+                    for item in parsable_items:
+                        parsed_item = self.parse_item(item)
+                        if parsed_item:
+                            self.store_item(parsed_item)
+                        if parse_items_prog_bar_display:
+                            bar.display(f"{bar.runtime}")
                 self.logger.info(
                     f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
                 )

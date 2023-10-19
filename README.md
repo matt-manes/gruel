@@ -10,10 +10,3 @@ Install with:
 pip install gruel
 </pre>
 
-
-
-## Usage
-
-<pre>
-
-</pre>
