@@ -112,6 +112,20 @@ class Gruel:
         """Store `item`."""
         raise NotImplementedError
 
+    def _parse_items_no_prog_bar(self, parsable_items: list[ParsableItem]):
+        for item in parsable_items:
+            parsed_item = self.parse_item(item)
+            if parsed_item:
+                self.store_item(parsed_item)
+
+    def _parse_items_prog_bar(self, parsable_items: list[ParsableItem]):
+        with ProgBar(len(parsable_items)) as bar:
+            for item in parsable_items:
+                parsed_item = self.parse_item(item)
+                if parsed_item:
+                    self.store_item(parsed_item)
+                    bar.display(f"{bar.runtime}")
+
     def scrape(self, parse_items_prog_bar_display: bool = False):
         """Run the scraper:
         1. prescrape chores
@@ -128,13 +142,10 @@ class Gruel:
             except Exception:
                 self.logger.exception(f"Error in {self.name}:get_parsable_items().")
             else:
-                with ProgBar(len(parsable_items)) as bar:
-                    for item in parsable_items:
-                        parsed_item = self.parse_item(item)
-                        if parsed_item:
-                            self.store_item(parsed_item)
-                        if parse_items_prog_bar_display:
-                            bar.display(f"{bar.runtime}")
+                if parse_items_prog_bar_display:
+                    self._parse_items_prog_bar(parsable_items)
+                else:
+                    self._parse_items_no_prog_bar(parsable_items)
                 self.logger.info(
                     f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
                 )
