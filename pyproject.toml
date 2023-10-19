@@ -7,7 +7,7 @@ name = "gruel"
 description = "Another scraping framework"
 version = "0.0.0"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "pytest"]
 readme = "README.md"
 keywords = ["scrape", "scraping", "webscraping", "webscraper", "beautifulsoup", "framework"]
 classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]

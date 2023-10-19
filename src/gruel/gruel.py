@@ -7,8 +7,8 @@ import requests
 from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
 from pathier import Pathier
-from whosyouragent import get_agent
 from printbuddies import ProgBar
+from whosyouragent import get_agent
 
 ParsableItem = dict | str | Tag
 
