@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.0 (2023-10-23)
+
+#### Performance improvements
+
+* add additional logging
+
 ## v0.0.2 (2023-10-19)
 
 #### Fixes
