@@ -139,6 +139,9 @@ class Gruel:
             self.prescrape_chores()
             try:
                 parsable_items = self.get_parsable_items()
+                self.logger.info(
+                    f"{self.name}:get_parsable_items() returned {(len(parsable_items))} items"
+                )
             except Exception:
                 self.logger.exception(f"Error in {self.name}:get_parsable_items().")
             else:
