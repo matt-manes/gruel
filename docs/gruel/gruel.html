@@ -120,8 +120,8 @@
 </span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a>
 </span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a>    <span class="nd">@property</span>
 </span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>        <span class="sd">&quot;&quot;&quot;Returns the stem of the file this instance was defined in.&quot;&quot;&quot;</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>        <span class="k">return</span> <span class="n">Pathier</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsourcefile</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span><span class="o">.</span><span class="n">stem</span>  <span class="c1"># type: ignore</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>        <span class="sd">&quot;&quot;&quot;Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn&#39;t given.&quot;&quot;&quot;</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="ow">or</span> <span class="n">Pathier</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsourcefile</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span><span class="o">.</span><span class="n">stem</span>  <span class="c1"># type: ignore</span>
 </span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>
 </span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>    <span class="k">def</span> <span class="nf">_init_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a>        <span class="n">log_dir</span> <span class="o">=</span> <span class="n">Pathier</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;logs&quot;</span>
@@ -277,8 +277,8 @@
 </span><span id="Gruel-26"><a href="#Gruel-26"><span class="linenos"> 26</span></a>
 </span><span id="Gruel-27"><a href="#Gruel-27"><span class="linenos"> 27</span></a>    <span class="nd">@property</span>
 </span><span id="Gruel-28"><a href="#Gruel-28"><span class="linenos"> 28</span></a>    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="Gruel-29"><a href="#Gruel-29"><span class="linenos"> 29</span></a>        <span class="sd">&quot;&quot;&quot;Returns the stem of the file this instance was defined in.&quot;&quot;&quot;</span>
-</span><span id="Gruel-30"><a href="#Gruel-30"><span class="linenos"> 30</span></a>        <span class="k">return</span> <span class="n">Pathier</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsourcefile</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span><span class="o">.</span><span class="n">stem</span>  <span class="c1"># type: ignore</span>
+</span><span id="Gruel-29"><a href="#Gruel-29"><span class="linenos"> 29</span></a>        <span class="sd">&quot;&quot;&quot;Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn&#39;t given.&quot;&quot;&quot;</span>
+</span><span id="Gruel-30"><a href="#Gruel-30"><span class="linenos"> 30</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="ow">or</span> <span class="n">Pathier</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsourcefile</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span><span class="o">.</span><span class="n">stem</span>  <span class="c1"># type: ignore</span>
 </span><span id="Gruel-31"><a href="#Gruel-31"><span class="linenos"> 31</span></a>
 </span><span id="Gruel-32"><a href="#Gruel-32"><span class="linenos"> 32</span></a>    <span class="k">def</span> <span class="nf">_init_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span id="Gruel-33"><a href="#Gruel-33"><span class="linenos"> 33</span></a>        <span class="n">log_dir</span> <span class="o">=</span> <span class="n">Pathier</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;logs&quot;</span>
@@ -444,7 +444,7 @@
     </div>
     <a class="headerlink" href="#Gruel.name"></a>
     
-            <div class="docstring"><p>Returns the stem of the file this instance was defined in.</p>
+            <div class="docstring"><p>Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given.</p>
 </div>
 
 
