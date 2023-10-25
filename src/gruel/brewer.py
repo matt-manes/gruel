@@ -7,8 +7,8 @@ import logging
 import sys
 from typing import Any
 
+import quickpool
 from pathier import Pathier, Pathish
-from printbuddies import PoolBar
 from younotyou import younotyou
 
 from gruel import Gruel
@@ -69,6 +69,8 @@ class Brewer:
 
     def load_scrapers(self) -> list[Gruel]:
         """Load scraper classes that inherit from `Gruel`.
+
+        NOTE: Classes are loaded, but scraper objects are not instantiated until the `scrape()` method is called.
 
         #### :params:
 
@@ -157,7 +159,7 @@ class Brewer:
         """Run the `scrape()` method for each scraper in `scrapers`.
 
         Execution is multithreaded."""
-        pool = PoolBar("thread", [scraper().scrape for scraper in scrapers])  # type: ignore
+        pool = quickpool.ThreadPool([scraper().scrape for scraper in scrapers])  # type: ignore
         pool.execute()
 
     def brew(self):
