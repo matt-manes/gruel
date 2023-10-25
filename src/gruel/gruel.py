@@ -25,8 +25,8 @@ class Gruel:
 
     @property
     def name(self) -> str:
-        """Returns the stem of the file this instance was defined in."""
-        return Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
+        """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
+        return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
     def _init_logger(self):
         log_dir = Pathier.cwd() / "logs"
