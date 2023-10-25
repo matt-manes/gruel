@@ -162,6 +162,11 @@ class Brewer:
         pool = quickpool.ThreadPool([scraper().scrape for scraper in scrapers])  # type: ignore
         pool.execute()
 
+    def logprint(self, message: str):
+        """Log and print `message`."""
+        self.logger.info(message)
+        print(message)
+
     def brew(self):
         """Execute pipeline.
 
@@ -170,26 +175,26 @@ class Brewer:
         3. self.scrape()
         4. self.postscrape_chores()"""
 
-        def logprint(message: str):
-            self.logger.info(message)
-            print(message)
-
-        logprint("Beginning brew")
-        # 1--------------------------------------------
-        logprint("Executing prescrape chores")
-        self.prescrape_chores()
-        # 2--------------------------------------------
-        logprint("Loading scrapers")
-        scrapers = self.load_scrapers()
-        print(f"Loaded {len(scrapers)} scrapers")
-        # 3--------------------------------------------
-        logprint("Starting scrape")
-        self.scrape(scrapers)
-        logprint("Scrape complete")
-        # 4--------------------------------------------
-        logprint("Executing postscrape chores")
-        self.postscrape_chores()
-        logprint("Brew complete")
+        try:
+            self.logprint("Beginning brew")
+            # 1--------------------------------------------
+            self.logprint("Executing prescrape chores")
+            self.prescrape_chores()
+            # 2--------------------------------------------
+            self.logprint("Loading scrapers")
+            scrapers = self.load_scrapers()
+            print(f"Loaded {len(scrapers)} scrapers")
+            # 3--------------------------------------------
+            self.logprint("Starting scrape")
+            self.scrape(scrapers)
+            self.logprint("Scrape complete")
+            # 4--------------------------------------------
+            self.logprint("Executing postscrape chores")
+            self.postscrape_chores()
+            self.logprint("Brew complete")
+        except Exception as e:
+            print(e)
+            self.logger.exception("Exception occured during brew():")
 
 
 def get_args() -> argparse.Namespace:
