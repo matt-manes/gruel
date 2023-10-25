@@ -48,9 +48,15 @@ class Brewer:
         self.recursive = recursive
 
     def _init_logger(self):
-        self.logger = logging.getLogger(Pathier(__file__).stem)
+        # When Brewer is subclassed, use that file's stem instead of `brewer`
+        source_file = inspect.getsourcefile(type(self))
+        if source_file:
+            log_name = Pathier(source_file).stem
+        else:
+            log_name = Pathier(__file__).stem
+        self.logger = logging.getLogger(log_name)
         if not self.logger.hasHandlers():
-            handler = logging.FileHandler(Pathier(__file__).stem + ".log")
+            handler = logging.FileHandler(log_name + ".log")
             handler.setFormatter(
                 logging.Formatter(
                     "{levelname}|-|{asctime}|-|{message}",
@@ -90,15 +96,18 @@ class Brewer:
         modules = []
         self._module_names = []
         for file in files:
+            module_name = Pathier(file).stem
             try:
-                module_name = Pathier(file).stem
-                self._module_names.append(module_name)
                 module = importlib.machinery.SourceFileLoader(
                     module_name, file
                 ).load_module()
-                modules.append(module)
             except Exception as e:
-                ...
+                self.logger.exception(
+                    f"Failed to load module '{module_name}' from '{file}'."
+                )
+            else:
+                self._module_names.append(module_name)
+                modules.append(module)
         gruels = [
             getattr(module, class_)
             for module in modules
@@ -158,20 +167,27 @@ class Brewer:
         2. self.load_scrapers()
         3. self.scrape()
         4. self.postscrape_chores()"""
-        self.logger.info("Beginning brew")
-        print("Beginning brew")
-        print("Executing prescrape chores...")
+
+        def logprint(message: str):
+            self.logger.info(message)
+            print(message)
+
+        logprint("Beginning brew")
+        # 1--------------------------------------------
+        logprint("Executing prescrape chores")
         self.prescrape_chores()
-        print("Loading scrapers...")
+        # 2--------------------------------------------
+        logprint("Loading scrapers")
         scrapers = self.load_scrapers()
-        print(f"Loaded {len(scrapers)} scrapers.")
-        print("Starting scrape...")
+        print(f"Loaded {len(scrapers)} scrapers")
+        # 3--------------------------------------------
+        logprint("Starting scrape")
         self.scrape(scrapers)
-        print("Scrape complete.")
-        print("Executing postscrape chores...")
+        logprint("Scrape complete")
+        # 4--------------------------------------------
+        logprint("Executing postscrape chores")
         self.postscrape_chores()
-        print("Brew complete.")
-        self.logger.info("Brew complete.")
+        logprint("Brew complete")
 
 
 def get_args() -> argparse.Namespace:
