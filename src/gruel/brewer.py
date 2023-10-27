@@ -3,10 +3,10 @@ import importlib
 import importlib.machinery
 import importlib.util
 import inspect
-import logging
 import sys
 from typing import Any
 
+import loggi
 import quickpool
 from pathier import Pathier, Pathish
 from younotyou import younotyou
@@ -54,18 +54,7 @@ class Brewer:
             log_name = Pathier(source_file).stem
         else:
             log_name = Pathier(__file__).stem
-        self.logger = logging.getLogger(log_name)
-        if not self.logger.hasHandlers():
-            handler = logging.FileHandler(log_name + ".log")
-            handler.setFormatter(
-                logging.Formatter(
-                    "{levelname}|-|{asctime}|-|{message}",
-                    style="{",
-                    datefmt="%m/%d/%Y %I:%M:%S %p",
-                )
-            )
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
+        self.logger = loggi.getLogger(log_name)
 
     def load_scrapers(self) -> list[Gruel]:
         """Load scraper classes that inherit from `Gruel`.

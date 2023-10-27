@@ -1,8 +1,8 @@
 import inspect
-import logging
 import time
 from typing import Any
 
+import loggi
 import requests
 from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
@@ -29,22 +29,9 @@ class Gruel:
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
     def _init_logger(self):
-        log_dir = Pathier.cwd() / "logs"
+        log_dir = Pathier.cwd() / "gruel_logs"
         log_dir.mkdir()
-        self.logger = logging.getLogger(self.name)
-        if not self.logger.hasHandlers():
-            handler = logging.FileHandler(
-                (log_dir / self.name).with_suffix(".log"), encoding="utf-8"
-            )
-            handler.setFormatter(
-                logging.Formatter(
-                    "{levelname}|-|{asctime}|-|{message}",
-                    style="{",
-                    datefmt="%m/%d/%Y %I:%M:%S %p",
-                )
-            )
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
+        self.logger = loggi.getLogger(self.name)
 
     def get_page(
         self, url: str, method: str = "get", headers: dict[str, str] = {}
