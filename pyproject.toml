@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "gruel"
 description = "Another scraping framework"
-version = "0.3.0"
+version = "0.3.1"
 requires-python = ">=3.10"
 dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "pytest", "quickpool", "loggi"]
 readme = "README.md"
