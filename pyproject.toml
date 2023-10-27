@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "gruel"
 description = "Another scraping framework"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.10"
-dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "pytest", "quickpool"]
+dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "pytest", "quickpool", "loggi"]
 readme = "README.md"
 keywords = ["scrape", "scraping", "webscraping", "webscraper", "beautifulsoup", "framework"]
 classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]
