@@ -30,8 +30,7 @@ class Gruel:
 
     def _init_logger(self):
         log_dir = Pathier.cwd() / "gruel_logs"
-        log_dir.mkdir()
-        self.logger = loggi.getLogger(self.name)
+        self.logger = loggi.getLogger(self.name, log_dir)
 
     def get_page(
         self, url: str, method: str = "get", headers: dict[str, str] = {}
