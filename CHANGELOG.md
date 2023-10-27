@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1 (2023-10-26)
+
+#### Fixes
+
+* fix not passing log_dir to getLogger
+
 ## v0.3.0 (2023-10-26)
 
 #### Refactorings
