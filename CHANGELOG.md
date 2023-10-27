@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.0 (2023-10-26)
+
+#### Refactorings
+
+* replace logging with loggi
+
 ## v0.2.0 (2023-10-25)
 
 #### Fixes
