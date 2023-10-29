@@ -3,7 +3,6 @@ import importlib
 import importlib.machinery
 import importlib.util
 import inspect
-import sys
 from typing import Any
 
 import loggi
@@ -84,7 +83,7 @@ class Brewer:
             for file in globber(pattern)
         ]
         files = younotyou(files, exclude_patterns=self.file_exclude_patterns)
-        modules = []
+        self.modules = {}
         self._module_names = []
         for file in files:
             module_name = Pathier(file).stem
@@ -98,10 +97,10 @@ class Brewer:
                 )
             else:
                 self._module_names.append(module_name)
-                modules.append(module)
+                self.modules[module] = module
         gruels = [
             getattr(module, class_)
-            for module in modules
+            for module in self.modules.values()
             for class_ in self.subgruel_classes
             if class_ in dir(module) and self.is_subgruel(getattr(module, class_))
         ]
@@ -115,8 +114,8 @@ class Brewer:
 
     def pop_modules(self):
         """Unload modules."""
-        for module in self._module_names:
-            sys.modules.pop(module)
+        for module in self.modules:
+            del module
         self._module_names = []
 
     def get_bases(self, object: Any) -> list[Any]:
