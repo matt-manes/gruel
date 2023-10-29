@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.0 (2023-10-29)
+
+#### Refactorings
+
+* change how modules are unloaded
+
 ## v0.3.1 (2023-10-26)
 
 #### Fixes
