@@ -73,7 +73,8 @@ class Brewer:
 
         `recursive`: Whether the search should be recursive or not.
 
-        >>> load_scrapers("getToTheGig/scrapers", ["VenueScraper"], ["*.py"], ["*template*", "*giggruel*"])"""
+        >>> load_scrapers("getToTheGig/scrapers", ["VenueScraper"], ["*.py"], ["*template*", "*giggruel*"])
+        """
         globber = self.scan_path.glob
         if self.recursive:
             globber = self.scan_path.rglob
@@ -147,7 +148,10 @@ class Brewer:
         """Run the `scrape()` method for each scraper in `scrapers`.
 
         Execution is multithreaded."""
-        pool = quickpool.ThreadPool([scraper().scrape for scraper in scrapers])  # type: ignore
+        execute = lambda scraper: scraper().scrape()
+        pool = quickpool.ThreadPool(
+            [execute] * len(scrapers), [(scraper,) for scraper in scrapers]
+        )
         pool.execute()
 
     def logprint(self, message: str):

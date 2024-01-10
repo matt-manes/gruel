@@ -70,7 +70,7 @@ class Gruel:
 
     def postscrape_chores(self):
         """Chores to do after scraping."""
-        ...
+        loggi.close(self.logger)
 
     def get_parsable_items(self) -> list[ParsableItem]:
         """Get relevant webpages and extract raw data that needs to be parsed.
