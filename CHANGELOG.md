@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.1 (2024-01-09)
+
+#### Fixes
+
+* prevent crashing caused by too many files open
+
+
 ## v0.4.0 (2023-10-29)
 
 #### Refactorings
