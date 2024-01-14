@@ -2,11 +2,11 @@
 name = "gruel"
 description = "Another scraping framework"
 version = "0.4.1"
-dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "pytest", "quickpool", "loggi"]
+dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "quickpool", "loggi"]
 readme = "README.md"
 keywords = ["scrape", "scraping", "webscraping", "webscraper", "beautifulsoup", "framework"]
 classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]
-requires-python = ">=3.10"
+requires-python = ">=3.10, <=3.12"
 
 [[project.authors]]
 name = "Matt Manes"
