@@ -142,6 +142,28 @@
 
 
             <div class="docstring"><p>Scraper base class.</p>
+
+<p>Classes subclassing <code>Gruel</code> need to implement the following methods:</p>
+
+<ul>
+<li><code>get_parsable_items(self) -&gt; list[Any]</code></li>
+<li><code>parse_item(self, item: Any)-&gt;Any</code></li>
+<li><code>store_item(self, item: Any)</code></li>
+</ul>
+
+<p>Calling the <code><a href="#SubGruel.scrape">scrape()</a></code> method will execute:</p>
+
+<ol>
+<li><code>self.prescrape_chores()</code> (does nothing unless overridden)</li>
+<li><code>self.get_parsable_items()</code></li>
+<li><code>self.parse_item()</code> for each item returned by <code>self.get_parsable_items()</code></li>
+<li><code>self.store_item()</code> for each successfully parsed item</li>
+<li><code>self.postscrape_chores()</code> (only closes this instance's log file unless overridden)</li>
+</ol>
+
+<p>When overriding <code>self.postscrape_chores</code>, it's recommended to either
+call <code>super().postscrape_chores()</code> or make sure to call <code>self.log.close()</code>.
+Otherwise running a large number of scrapers can cause file handle limit issues.</p>
 </div>
 
 

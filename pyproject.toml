@@ -1,8 +1,8 @@
 [project]
 name = "gruel"
 description = "Another scraping framework"
-version = "0.4.1"
-dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "quickpool", "loggi"]
+version = "0.5.0"
+dependencies = ["pathier", "printbuddies", "younotyou", "bs4", "noiftimer", "requests", "whosyouragent", "quickpool", "loggi", "beautifulsoup4"]
 readme = "README.md"
 keywords = ["scrape", "scraping", "webscraping", "webscraper", "beautifulsoup", "framework"]
 classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]
