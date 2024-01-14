@@ -14,7 +14,24 @@ ParsableItem = dict | str | Tag
 
 
 class Gruel:
-    """Scraper base class."""
+    """Scraper base class.
+
+    Classes subclassing `Gruel` need to implement the following methods:
+
+    * `get_parsable_items(self) -> list[Any]`
+    * `parse_item(self, item: Any)->Any`
+    * `store_item(self, item: Any)`
+
+    Calling the `scrape()` method will execute:
+    1. `self.prescrape_chores()` (does nothing unless overridden)
+    2. `self.get_parsable_items()`
+    3. `self.parse_item()` for each item returned by `self.get_parsable_items()`
+    4. `self.store_item()` for each successfully parsed item
+    5. `self.postscrape_chores()` (only closes this instance's log file unless overridden)
+
+    When overriding `self.postscrape_chores`, it's recommended to either
+    call `super().postscrape_chores()` or make sure to call `self.log.close()`.
+    Otherwise running a large number of scrapers can cause file handle limit issues."""
 
     def __init__(self, name: str | None = None, log_dir: Pathish | None = None):
         """
