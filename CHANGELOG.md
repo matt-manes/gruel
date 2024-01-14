@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.0 (2024-01-14)
+
+#### New Features
+
+* add options to specify log directories
+#### Docs
+
+* add class and `__init__` docstrings
+#### Others
+
+* remove pytest and specify less than 3.12 py version
+
+
 ## v0.4.1 (2024-01-09)
 
 #### Fixes
