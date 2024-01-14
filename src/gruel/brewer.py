@@ -21,6 +21,7 @@ class Brewer:
         scan_path: Pathish = Pathier.cwd(),
         file_include_patterns: list[str] = ["*.py"],
         recursive: bool = True,
+        log_dir: Pathish | None = None,
     ):
         """Run `Gruel` scrapers.
 
@@ -37,23 +38,27 @@ class Brewer:
 
         `recursive`: Whether the scan should be recursive or not.
 
+        `log_dir`: The directory this instance's log should be saved to.
+        If `None`, it will be saved to the current working directory.
+
         >>> brewer = Brewer(["VenueScraper"], ["*template*", "*giggruel*"], "scrapers")
         >>> brewer.brew()"""
-        self._init_logger()
+        self._init_logger(log_dir)
         self.subgruel_classes = subgruel_classes
         self.file_exclude_patterns = file_exclude_patterns
         self.file_include_patterns = file_include_patterns
         self.scan_path = Pathier(scan_path)
         self.recursive = recursive
 
-    def _init_logger(self):
+    def _init_logger(self, log_dir: Pathish | None = None):
         # When Brewer is subclassed, use that file's stem instead of `brewer`
+        log_dir = Pathier(log_dir) if log_dir else Pathier.cwd()
         source_file = inspect.getsourcefile(type(self))
         if source_file:
             log_name = Pathier(source_file).stem
         else:
             log_name = Pathier(__file__).stem
-        self.logger = loggi.getLogger(log_name)
+        self.logger = loggi.getLogger(log_name, log_dir)
 
     def load_scrapers(self) -> list[Gruel]:
         """Load scraper classes that inherit from `Gruel`.
@@ -227,6 +232,13 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help=""" Whether -p/--path should be scanned recursively or not. """,
     )
+    parser.add_argument(
+        "-l",
+        "--log_dir",
+        type=str,
+        default=None,
+        help=""" The directory to save the brew log to.""",
+    )
     args = parser.parse_args()
     args.path = Pathier(args.path)
 
@@ -237,7 +249,12 @@ def main(args: argparse.Namespace | None = None):
     if not args:
         args = get_args()
     brewer = Brewer(
-        args.subgruel_classes, args.excludes, args.path, args.includes, args.recursive
+        args.subgruel_classes,
+        args.excludes,
+        args.path,
+        args.includes,
+        args.recursive,
+        args.log_dir,
     )
     brewer.brew()
 

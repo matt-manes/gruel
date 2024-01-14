@@ -6,7 +6,7 @@ import loggi
 import requests
 from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
-from pathier import Pathier
+from pathier import Pathier, Pathish
 from printbuddies import ProgBar
 from whosyouragent import get_agent
 
@@ -16,9 +16,16 @@ ParsableItem = dict | str | Tag
 class Gruel:
     """Scraper base class."""
 
-    def __init__(self, name: str | None = None):
+    def __init__(self, name: str | None = None, log_dir: Pathish | None = None):
+        """
+        :params:
+        * `name`: The name of this scraper. If `None`, the name will be the stem of the file this class/subclass was defined in.
+        i.e. A `Gruel` subclass located in a file called `myscraper.py` will have the name `"myscraper"`.
+        * `log_dir`: The directory this scraper's logs should be saved to.
+        If `None`, the logs will be written to a folder called `"gruel_logs"` within the current working directory.
+        """
         self._name = name
-        self._init_logger()
+        self._init_logger(log_dir)
         self.timer = Timer()
         self.success_count = 0
         self.fail_count = 0
@@ -28,8 +35,8 @@ class Gruel:
         """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
-    def _init_logger(self):
-        log_dir = Pathier.cwd() / "gruel_logs"
+    def _init_logger(self, log_dir: Pathish | None):
+        log_dir = Pathier.cwd() / "gruel_logs" if not log_dir else Pathier(log_dir)
         self.logger = loggi.getLogger(self.name, log_dir)
 
     def get_page(
