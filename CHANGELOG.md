@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.1 (2024-01-14)
+
+#### Fixes
+
+* remove redundant dependency from pyproject
+
+
 ## v0.5.0 (2024-01-14)
 
 #### New Features
