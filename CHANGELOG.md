@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.0 (2024-01-18)
+
+#### Refactorings
+
+* add additional parameters to `get_page()`
+
+
 ## v0.5.1 (2024-01-14)
 
 #### Fixes
