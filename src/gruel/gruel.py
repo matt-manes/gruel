@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import ProgBar
-from whosyouragent import get_agent
+import whosyouragent
 
 ParsableItem = dict | str | Tag
 
@@ -57,22 +57,38 @@ class Gruel:
         self.logger = loggi.getLogger(self.name, log_dir)
 
     def get_page(
-        self, url: str, method: str = "get", headers: dict[str, str] = {}
+        self,
+        url: str,
+        method: str = "get",
+        headers: dict[str, str] = {},
+        timeout: int | None = None,
+        retry_on_fail: bool = True,
+        params: dict | None = None,
+        data: dict | None = None,
     ) -> requests.Response:
         """Request `url` and return the `requests.Response` object.
 
         By default, the only header sent is a randomized user agent string.
 
         This can be overridden by supplying a user agent in the `headers` param."""
+        args = [method, url]
+        headers = whosyouragent.get_header() | headers
+        kwargs = {
+            "headers": headers,
+            "timeout": timeout,
+            "params": params,
+            "data": data,
+        }
         try:
-            return requests.request(
-                method, url, headers={"User-Agent": get_agent()} | headers
-            )
+            response = requests.request(*args, **kwargs)
+            print(response.request.body)
+            return response
         except Exception as e:
-            time.sleep(1)
-            return requests.request(
-                method, url, headers={"User-Agent": get_agent()} | headers
-            )
+            if retry_on_fail:
+                time.sleep(1)
+                return requests.request(*args, **kwargs)
+            else:
+                raise e
 
     def as_soup(self, response: requests.Response) -> BeautifulSoup:
         """Returns the text content of `response` as a `BeautifulSoup` object."""
