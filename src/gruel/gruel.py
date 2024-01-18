@@ -81,7 +81,6 @@ class Gruel:
         }
         try:
             response = requests.request(*args, **kwargs)
-            print(response.request.body)
             return response
         except Exception as e:
             if retry_on_fail:
