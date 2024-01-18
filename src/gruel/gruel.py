@@ -4,11 +4,11 @@ from typing import Any
 
 import loggi
 import requests
+import whosyouragent
 from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import ProgBar
-import whosyouragent
 
 ParsableItem = dict | str | Tag
 
