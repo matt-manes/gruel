@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.1 (2024-01-18)
+
+#### Fixes
+
+* remove erroneous `print()` call
+
+
 ## v0.6.0 (2024-01-18)
 
 #### Refactorings
