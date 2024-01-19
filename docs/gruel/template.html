@@ -76,7 +76,7 @@
 </span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a>        <span class="sd">&quot;&quot;&quot;Get relevant webpages and extract raw data that needs to be parsed.</span>
 </span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a>
 </span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="sd">        e.g. first 10 results for an endpoint that returns json content</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="sd">        &gt;&gt;&gt; return self.get_page(some_url).json()[:10]&quot;&quot;&quot;</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="sd">        &gt;&gt;&gt; return self.request(some_url).json()[:10]&quot;&quot;&quot;</span>
 </span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a>
 </span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>    <span class="k">def</span> <span class="nf">parse_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="n">ParsableItem</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
@@ -117,7 +117,7 @@
 </span><span id="SubGruel-9"><a href="#SubGruel-9"><span class="linenos"> 9</span></a>        <span class="sd">&quot;&quot;&quot;Get relevant webpages and extract raw data that needs to be parsed.</span>
 </span><span id="SubGruel-10"><a href="#SubGruel-10"><span class="linenos">10</span></a>
 </span><span id="SubGruel-11"><a href="#SubGruel-11"><span class="linenos">11</span></a><span class="sd">        e.g. first 10 results for an endpoint that returns json content</span>
-</span><span id="SubGruel-12"><a href="#SubGruel-12"><span class="linenos">12</span></a><span class="sd">        &gt;&gt;&gt; return self.get_page(some_url).json()[:10]&quot;&quot;&quot;</span>
+</span><span id="SubGruel-12"><a href="#SubGruel-12"><span class="linenos">12</span></a><span class="sd">        &gt;&gt;&gt; return self.request(some_url).json()[:10]&quot;&quot;&quot;</span>
 </span><span id="SubGruel-13"><a href="#SubGruel-13"><span class="linenos">13</span></a>        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </span><span id="SubGruel-14"><a href="#SubGruel-14"><span class="linenos">14</span></a>
 </span><span id="SubGruel-15"><a href="#SubGruel-15"><span class="linenos">15</span></a>    <span class="k">def</span> <span class="nf">parse_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="n">ParsableItem</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
@@ -182,7 +182,7 @@ Otherwise running a large number of scrapers can cause file handle limit issues.
 </span><span id="SubGruel.get_parsable_items-9"><a href="#SubGruel.get_parsable_items-9"><span class="linenos"> 9</span></a>        <span class="sd">&quot;&quot;&quot;Get relevant webpages and extract raw data that needs to be parsed.</span>
 </span><span id="SubGruel.get_parsable_items-10"><a href="#SubGruel.get_parsable_items-10"><span class="linenos">10</span></a>
 </span><span id="SubGruel.get_parsable_items-11"><a href="#SubGruel.get_parsable_items-11"><span class="linenos">11</span></a><span class="sd">        e.g. first 10 results for an endpoint that returns json content</span>
-</span><span id="SubGruel.get_parsable_items-12"><a href="#SubGruel.get_parsable_items-12"><span class="linenos">12</span></a><span class="sd">        &gt;&gt;&gt; return self.get_page(some_url).json()[:10]&quot;&quot;&quot;</span>
+</span><span id="SubGruel.get_parsable_items-12"><a href="#SubGruel.get_parsable_items-12"><span class="linenos">12</span></a><span class="sd">        &gt;&gt;&gt; return self.request(some_url).json()[:10]&quot;&quot;&quot;</span>
 </span><span id="SubGruel.get_parsable_items-13"><a href="#SubGruel.get_parsable_items-13"><span class="linenos">13</span></a>        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </span></pre></div>
 
@@ -192,7 +192,7 @@ Otherwise running a large number of scrapers can cause file handle limit issues.
 <p>e.g. first 10 results for an endpoint that returns json content</p>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_page</span><span class="p">(</span><span class="n">some_url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()[:</span><span class="mi">10</span><span class="p">]</span>
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="n">some_url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()[:</span><span class="mi">10</span><span class="p">]</span>
 </code></pre>
 </div>
 </div>
@@ -275,7 +275,7 @@ Otherwise running a large number of scrapers can cause file handle limit issues.
                                     <div><dt><a href="gruel.html#Gruel">gruel.gruel.Gruel</a></dt>
                                 <dd id="SubGruel.__init__" class="function"><a href="gruel.html#Gruel.__init__">Gruel</a></dd>
                 <dd id="SubGruel.name" class="variable"><a href="gruel.html#Gruel.name">name</a></dd>
-                <dd id="SubGruel.get_page" class="function"><a href="gruel.html#Gruel.get_page">get_page</a></dd>
+                <dd id="SubGruel.request" class="function"><a href="gruel.html#Gruel.request">request</a></dd>
                 <dd id="SubGruel.as_soup" class="function"><a href="gruel.html#Gruel.as_soup">as_soup</a></dd>
                 <dd id="SubGruel.get_soup" class="function"><a href="gruel.html#Gruel.get_soup">get_soup</a></dd>
                 <dd id="SubGruel.clean_string" class="function"><a href="gruel.html#Gruel.clean_string">clean_string</a></dd>
