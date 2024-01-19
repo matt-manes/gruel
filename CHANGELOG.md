@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.0 (2024-01-19)
+
+#### New Features
+
+* BREAKING: change `Gruel.get_page()` to `Gruel.request()` and make both it and `Gruel.as_soup()` into static methods
+
+
 ## v0.6.1 (2024-01-18)
 
 #### Fixes
