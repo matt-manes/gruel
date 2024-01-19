@@ -8,7 +8,7 @@ class SubGruel(Gruel):
         """Get relevant webpages and extract raw data that needs to be parsed.
 
         e.g. first 10 results for an endpoint that returns json content
-        >>> return self.get_page(some_url).json()[:10]"""
+        >>> return self.request(some_url).json()[:10]"""
         raise NotImplementedError
 
     def parse_item(self, item: ParsableItem) -> Any:

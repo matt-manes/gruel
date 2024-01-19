@@ -56,21 +56,24 @@ class Gruel:
         log_dir = Pathier.cwd() / "gruel_logs" if not log_dir else Pathier(log_dir)
         self.logger = loggi.getLogger(self.name, log_dir)
 
-    def get_page(
-        self,
+    @staticmethod
+    def request(
         url: str,
         method: str = "get",
         headers: dict[str, str] = {},
-        timeout: int | None = None,
-        retry_on_fail: bool = True,
         params: dict | None = None,
         data: dict | None = None,
+        timeout: int | None = None,
+        retry_on_fail: bool = True,
     ) -> requests.Response:
-        """Request `url` and return the `requests.Response` object.
+        """Send a request to `url` and return the `requests.Response` object.
 
         By default, the only header sent is a randomized user agent string.
 
-        This can be overridden by supplying a user agent in the `headers` param."""
+        This can be overridden by supplying a user agent in the `headers` param.
+
+        If `retry_on_fail` is `True`, the request will be repeated after 1 second if the originally request causes an exception to be thrown.
+        Otherwise, the exception will be raised."""
         args = [method, url]
         headers = whosyouragent.get_header() | headers
         kwargs = {
@@ -89,7 +92,8 @@ class Gruel:
             else:
                 raise e
 
-    def as_soup(self, response: requests.Response) -> BeautifulSoup:
+    @staticmethod
+    def as_soup(response: requests.Response) -> BeautifulSoup:
         """Returns the text content of `response` as a `BeautifulSoup` object."""
         return BeautifulSoup(response.text, "html.parser")
 
@@ -97,12 +101,15 @@ class Gruel:
         self, url: str, method: str = "get", headers: dict[str, str] = {}
     ) -> BeautifulSoup:
         """Request `url` with `headers` and return `BeautifulSoup` object."""
-        return self.as_soup(self.get_page(url, method, headers))
+        return self.as_soup(self.request(url, method, headers))
 
     def clean_string(self, text: str) -> str:
         """Strip `\\n\\r\\t` and whitespace from `text`."""
         return text.strip(" \n\t\r")
 
+    # |==============================================================================|
+    # Overridables
+    # |==============================================================================|
     def prescrape_chores(self):
         """Chores to do before scraping."""
         ...
@@ -155,8 +162,7 @@ class Gruel:
         """Run the scraper:
         1. prescrape chores
         2. get parsable items
-        3. parse items
-        4. store items
+        3. parse and store items
         5. postscrape chores"""
         try:
             self.timer.start()
