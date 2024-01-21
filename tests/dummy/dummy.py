@@ -1,5 +1,6 @@
-from gruel import Gruel
 from pathier import Pathier
+
+from gruel import Gruel
 
 
 class DummyGruel(Gruel):
