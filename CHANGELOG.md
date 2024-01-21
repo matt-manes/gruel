@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.0.0 (2024-01-21)
+
+#### New Features
+
+* add init args and kwargs for scrapers being brewed
+#### Refactorings
+
+* BREAKING: separate gruel finding logic from `Brewer` class
+#### Docs
+
+* add prog and description to cli argparser
+#### Others
+
+* add imports
+* add to gitignore
+
+
 ## v1.0.0 (2024-01-19)
 
 #### New Features
