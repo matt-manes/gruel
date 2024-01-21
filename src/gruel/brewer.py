@@ -11,7 +11,7 @@ import quickpool
 from pathier import Pathier, Pathish
 from younotyou import Matcher, younotyou
 
-from gruel import Gruel
+from gruel.grueler import Gruel
 
 
 class GruelFinder:
