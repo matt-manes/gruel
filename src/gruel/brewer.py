@@ -255,7 +255,9 @@ class Brewer:
 
 
 def get_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog="Brewer", description="Invoke `Brewer` from the command line."
+    )
 
     parser.add_argument(
         "subgruel_classes",
