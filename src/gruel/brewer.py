@@ -15,6 +15,8 @@ from gruel import Gruel
 
 
 class GruelFinder:
+    """Find and load classes that subclass `Gruel`."""
+
     def __init__(
         self,
         subgruel_classes: list[str] = ["*"],
@@ -24,6 +26,27 @@ class GruelFinder:
         recursive: bool = True,
         log_dir: Pathish | None = None,
     ):
+        """#### :params:
+
+        `subgruel_classes`: A list of class names for scrapers that should be loaded.
+        In order to be loaded, a scraper class must have a name in this list and have `Gruel` somewhere in its inheritance hierarchy.
+        Can use wildcard ('*') patterns for matching.
+
+        `file_exclude_patterns`: Files that match these patterns will not be scanned.
+
+        `scan_path`: The path to scan for scraper classes.
+
+        `file_include_patterns`: Files that match these patterns will be scanned.
+
+        `recursive`: Whether the scan should be recursive or not.
+
+        `log_dir`: The directory this instance's log should be saved to.
+        If `None`, it will be saved to the current working directory.
+
+        Will find and load all classes in the "scrapers" directory that inherit from `Gruel`
+        and start with "MySubGruel", but don't contain "Scratch" in the name:
+        >>> finder = finder(["MySubGruel*"], ["*Scratch*"], "scrapers")
+        >>> gruels = finder.find()"""
         self.subgruel_classes = subgruel_classes
         self.file_exclude_patterns = file_exclude_patterns
         self.scan_path = scan_path or Pathier.cwd()
@@ -56,11 +79,9 @@ class GruelFinder:
         Returns the file list."""
         globber = self.scan_path.rglob if self.recursive else self.scan_path.glob
         files = [
-            str(
-                file
-                for pattern in self.file_include_patterns
-                for file in globber(pattern)
-            )
+            str(file)
+            for pattern in self.file_include_patterns
+            for file in globber(pattern)
         ]
         files = [
             Pathier(file)
@@ -103,33 +124,70 @@ class GruelFinder:
 
 
 class Brewer:
+    """Use to do multithreaded execution of a list of scrapers.
+
+    Intended to be used with `Gruel` scrapers, but anything with a `scrape` method can be passed.
+
+    To run any `Gruel` scrapers from the current directory:
+    >>> Brewer(GruelFinder().find()).brew()
+
+    The `prescrape_chores` and `postscrape_chores` can be set/overridden like the same methods in `Gruel`.
+
+    When calling the `brew` method they will be executed once before and after all the scrapers have been executed.
+
+    i.e.
+    >>> brewer = Brewer(GruelFinder().find())
+    >>> brewer.prescrape_chores()
+    >>> results = brewer.scrape()
+    >>> brewer.postscrape_chores()
+
+    is equivalent to
+    >>> results = Brewer(GruelFinder().find()).brew()
+
+    except `brew()` has some logging."""
+
     def __init__(
         self,
         scrapers: Sequence[Any],
+        scraper_args: Sequence[Sequence[Any]] = [],
+        scraper_kwargs: Sequence[dict[str, Any]] = [],
         log_dir: Pathish | None = None,
     ):
-        """Run `Gruel` scrapers.
+        """#### :params:
 
-        #### :params:
+        `scrapers`: A list of scraper classes to initialize and execute.
+        A scraper should not be instantiated before being passed.
+        When `Brewer` runs a scraper it will instantiate the object at execution time and call it's `scrape` method.
 
-        `subgruel_classes`: A list of class names for scrapers that should be loaded.
-        In order to be loaded, a scraper class must have a name in this list and have `Gruel` somewhere in its inheritance hierarchy.
+        `scraper_args`: A list where each element is a list of positional arguments to be passed to the corresponding scraper's `__init__` function.
 
-        `file_exclude_patterns`: Files that match these patterns will not be scanned.
+        `scraper_kwargs`: A list of dictionaries where each dictionary is a set of keyword arguments to be passed to the corresponding scraper's `__init__` function.
 
-        `scan_path`: The path to scan for scraper classes.
+        `log_dir`: The directory to store `Brewer` logs in. Defaults to the current working directory.
 
-        `file_include_patterns`: Files that match these patterns will be scanned.
-
-        `recursive`: Whether the scan should be recursive or not.
-
-        `log_dir`: The directory this instance's log should be saved to.
-        If `None`, it will be saved to the current working directory.
-
-        >>> brewer = Brewer(["VenueScraper"], ["*template*", "*giggruel*"], "scrapers")
-        >>> brewer.brew()"""
+        e.g.
+        >>> class MyGruel(Gruel):
+        >>>   def __init__(self, value:int):
+        >>>     super().__init__()
+        >>>     self.value = value
+        >>>
+        >>>   def scrape(self)->int:
+        >>>     return self.value
+        >>>
+        >>> num_scrapers = 5
+        >>> values = list(range(5))
+        >>> brewer = Brewer(
+        >>>   [MyGruel]*num_scrapers,
+        >>>   [(val,) for val in values]
+        >>> results = brewer.brew()
+        >>> print(results)
+        >>> [0, 1, 2, 3, 4]"""
         self._init_logger(log_dir)
         self.scrapers = scrapers
+        num_scrapers = len(self.scrapers)
+        # Pad args and kwargs if there aren't any given
+        self.scraper_args = scraper_args or [[]] * num_scrapers
+        self.scraper_kwargs = scraper_kwargs or [{}] * num_scrapers
 
     def _init_logger(self, log_dir: Pathish | None = None):
         # When Brewer is subclassed, use that file's stem instead of `brewer`
@@ -149,13 +207,24 @@ class Brewer:
         """Override to add any tasks to be done after running the scrapers."""
         ...
 
+    def _prep_scrapers(self) -> list[tuple[Any, Sequence[Any], dict[str, Any]]]:
+        return [
+            (scraper, args, kwargs)
+            for scraper, args, kwargs in zip(
+                self.scrapers, self.scraper_args, self.scraper_kwargs
+            )
+        ]
+
     def scrape(self) -> list[Any]:
         """Run the `scrape()` method for each scraper in `scrapers`.
 
         Execution is multithreaded."""
-        execute = lambda scraper: scraper().scrape()
+
+        def execute(scraper, args, kwargs):
+            return scraper(*args, **kwargs).scrape()
+
         pool = quickpool.ThreadPool(
-            [execute] * len(self.scrapers), [(scraper,) for scraper in self.scrapers]
+            [execute] * len(self.scrapers), self._prep_scrapers()
         )
         return pool.execute()
 
