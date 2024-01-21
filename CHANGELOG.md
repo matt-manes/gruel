@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.0.1 (2024-01-21)
+
+#### Fixes
+
+* avoid potential circular import issues
+
+
 ## v2.0.0 (2024-01-21)
 
 #### New Features
