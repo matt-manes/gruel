@@ -1,3 +1,6 @@
 import pytest
 
-from gruel import gruel
+import gruel
+from pathier import Pathier, Pathish
+
+root = Pathier(__file__).parent
