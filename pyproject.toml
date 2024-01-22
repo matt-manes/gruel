@@ -1,7 +1,7 @@
 [project]
 name = "gruel"
 description = "Another scraping framework"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = ["pathier", "printbuddies", "younotyou", "noiftimer", "requests", "whosyouragent", "quickpool", "loggi", "beautifulsoup4"]
 readme = "README.md"
 keywords = ["scrape", "scraping", "webscraping", "webscraper", "beautifulsoup", "framework"]
