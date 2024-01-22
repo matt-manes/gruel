@@ -4,7 +4,7 @@ import importlib.machinery
 import importlib.util
 import inspect
 from types import ModuleType
-from typing import Any, Sequence
+from typing import Any, Sequence, Type
 
 import loggi
 import quickpool
@@ -101,7 +101,7 @@ class GruelFinder:
         except Exception as e:
             self.logger.exception(f"Failed to load `{module_name}` from `{file}`.")
 
-    def strain_for_gruel(self, modules: list[ModuleType]) -> list[Gruel]:
+    def strain_for_gruel(self, modules: list[ModuleType]) -> list[Type[Gruel]]:
         """Searches `modules` for classes that inherit from `Gruel` and are in `self.subgruel_classes`.
 
         Returns the list of classes."""
@@ -113,7 +113,7 @@ class GruelFinder:
             if class_ in matcher and self.is_subgruel(getattr(module, class_))
         ]
 
-    def find(self) -> list[Gruel]:
+    def find(self) -> list[Type[Gruel]]:
         """Run the scan and return `Gruel` subclasses."""
         files = self.glob_files()
         modules = []
