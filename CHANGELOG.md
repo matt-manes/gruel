@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.0.2 (2024-01-21)
+
+#### Docs
+
+* fix type annotations
+
+
 ## v2.0.1 (2024-01-21)
 
 #### Fixes
