@@ -46,11 +46,24 @@ class Gruel:
         self.timer = Timer()
         self.success_count = 0
         self.fail_count = 0
+        self.failed_to_get_parsable_items = False
+        self.unexpected_failure_occured = False
+        self.parsable_items = []
+        self.parsed_items = []
 
     @property
     def name(self) -> str:
         """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
+
+    @property
+    def had_failures(self) -> bool:
+        """`True` if getting parsable items, parsing items, or unexpected failures occured."""
+        return (
+            (self.fail_count > 0)
+            or self.failed_to_get_parsable_items
+            or self.unexpected_failure_occured
+        )
 
     def _init_logger(self, log_dir: Pathish | None):
         log_dir = Pathier.cwd() / "gruel_logs" if not log_dir else Pathier(log_dir)
@@ -144,19 +157,25 @@ class Gruel:
         """Store `item`."""
         raise NotImplementedError
 
-    def _parse_items_no_prog_bar(self, parsable_items: list[ParsableItem]):
-        for item in parsable_items:
+    def _parse_items_no_prog_bar(self):
+        for item in self.parsable_items:
             parsed_item = self.parse_item(item)
             if parsed_item:
                 self.store_item(parsed_item)
+            # Append to `self.parsable_items` even if `None`
+            # so `parsable_items` and `parsed_items` are equal length
+            self.parsed_items.append(parsed_item)
 
-    def _parse_items_prog_bar(self, parsable_items: list[ParsableItem]):
-        with ProgBar(len(parsable_items)) as bar:
-            for item in parsable_items:
+    def _parse_items_prog_bar(self):
+        with ProgBar(len(self.parsable_items)) as bar:
+            for item in self.parsable_items:
                 parsed_item = self.parse_item(item)
                 if parsed_item:
                     self.store_item(parsed_item)
                     bar.display(f"{bar.runtime}")
+                # Append to `self.parsable_items` even if `None`
+                # so `parsable_items` and `parsed_items` are equal length
+                self.parsed_items.append(parsed_item)
 
     def scrape(self, parse_items_prog_bar_display: bool = False):
         """Run the scraper:
@@ -169,20 +188,22 @@ class Gruel:
             self.logger.info("Scrape started.")
             self.prescrape_chores()
             try:
-                parsable_items = self.get_parsable_items()
+                self.parsable_items = self.get_parsable_items()
                 self.logger.info(
-                    f"{self.name}:get_parsable_items() returned {(len(parsable_items))} items"
+                    f"{self.name}:get_parsable_items() returned {(len(self.parsable_items))} items"
                 )
             except Exception:
+                self.failed_to_get_parsable_items = True
                 self.logger.exception(f"Error in {self.name}:get_parsable_items().")
             else:
                 if parse_items_prog_bar_display:
-                    self._parse_items_prog_bar(parsable_items)
+                    self._parse_items_prog_bar()
                 else:
-                    self._parse_items_no_prog_bar(parsable_items)
+                    self._parse_items_no_prog_bar()
                 self.logger.info(
                     f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
                 )
         except Exception:
+            self.unexpected_failure_occured = True
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")
         self.postscrape_chores()
