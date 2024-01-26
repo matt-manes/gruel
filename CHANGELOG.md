@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.1.0 (2024-01-25)
+
+#### New Features
+
+* add members to `Gruel` to better track scrape runtime status and results
+
+
 ## v2.0.2 (2024-01-21)
 
 #### Docs
