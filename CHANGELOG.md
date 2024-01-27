@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.1.1 (2024-01-26)
+
+#### New Features
+
+* add json input to request method
+
+
 ## v2.1.0 (2024-01-25)
 
 #### New Features
