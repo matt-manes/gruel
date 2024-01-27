@@ -78,6 +78,7 @@ class Gruel:
         data: dict | None = None,
         timeout: int | None = None,
         retry_on_fail: bool = True,
+        json_: Any | None = None,
     ) -> requests.Response:
         """Send a request to `url` and return the `requests.Response` object.
 
@@ -94,6 +95,7 @@ class Gruel:
             "timeout": timeout,
             "params": params,
             "data": data,
+            "json": json_,
         }
         try:
             response = requests.request(*args, **kwargs)
