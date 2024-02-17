@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.0.0 (2024-02-17)
+
+#### Refactorings
+
+* BREAKING change `request` from static method of `Gruel` to independent method
+* improve type annotation coverage
+
+
 ## v2.1.1 (2024-01-26)
 
 #### New Features
