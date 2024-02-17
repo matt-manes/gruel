@@ -13,6 +13,44 @@ from printbuddies import ProgBar
 ParsableItem = dict[str, Any] | str | Tag
 
 
+def request(
+    url: str,
+    method: str = "get",
+    headers: dict[str, str] = {},
+    params: dict[str, Any] | None = None,
+    data: dict[str, Any] | None = None,
+    timeout: int | None = None,
+    retry_on_fail: bool = True,
+    json_: Any | None = None,
+) -> requests.Response:
+    """Send a request to `url` and return the `requests.Response` object.
+
+    By default, the only header sent is a randomized user agent string.
+
+    This can be overridden by supplying a user agent in the `headers` param.
+
+    If `retry_on_fail` is `True`, the request will be repeated after 1 second if the originally request causes an exception to be thrown.
+    Otherwise, the exception will be raised."""
+    request_args = [method, url]
+    headers = whosyouragent.get_header() | headers
+    request_kwargs = {
+        "headers": headers,
+        "timeout": timeout,
+        "params": params,
+        "data": data,
+        "json": json_,
+    }
+    try:
+        response = requests.request(*request_args, **request_kwargs)
+        return response
+    except Exception as e:
+        if retry_on_fail:
+            time.sleep(1)
+            return requests.request(*request_args, **request_kwargs)
+        else:
+            raise e
+
+
 class Gruel:
     """Scraper base class.
 
@@ -70,46 +108,6 @@ class Gruel:
         self.logger = loggi.getLogger(self.name, log_dir)
 
     @staticmethod
-    def request(
-        url: str,
-        method: str = "get",
-        headers: dict[str, str] = {},
-        params: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
-        timeout: int | None = None,
-        retry_on_fail: bool = True,
-        json_: Any | None = None,
-        *args: Any,
-        **kwargs: Any,
-    ) -> requests.Response:
-        """Send a request to `url` and return the `requests.Response` object.
-
-        By default, the only header sent is a randomized user agent string.
-
-        This can be overridden by supplying a user agent in the `headers` param.
-
-        If `retry_on_fail` is `True`, the request will be repeated after 1 second if the originally request causes an exception to be thrown.
-        Otherwise, the exception will be raised."""
-        request_args = [method, url]
-        headers = whosyouragent.get_header() | headers
-        request_kwargs = {
-            "headers": headers,
-            "timeout": timeout,
-            "params": params,
-            "data": data,
-            "json": json_,
-        }
-        try:
-            response = requests.request(*request_args, **request_kwargs)
-            return response
-        except Exception as e:
-            if retry_on_fail:
-                time.sleep(1)
-                return requests.request(*request_args, **request_kwargs)
-            else:
-                raise e
-
-    @staticmethod
     def as_soup(response: requests.Response) -> BeautifulSoup:
         """Returns the text content of `response` as a `BeautifulSoup` object."""
         return BeautifulSoup(response.text, "html.parser")
@@ -118,7 +116,7 @@ class Gruel:
         self, url: str, method: str = "get", headers: dict[str, str] = {}
     ) -> BeautifulSoup:
         """Request `url` with `headers` and return `BeautifulSoup` object."""
-        return self.as_soup(self.request(url, method, headers))
+        return self.as_soup(request(url, method, headers))
 
     def clean_string(self, text: str) -> str:
         """Strip `\\n\\r\\t` and whitespace from `text`."""
