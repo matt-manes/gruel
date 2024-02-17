@@ -10,7 +10,7 @@ from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import ProgBar
 
-ParsableItem = dict | str | Tag
+ParsableItem = dict[str, Any] | str | Tag
 
 
 class Gruel:
@@ -48,8 +48,8 @@ class Gruel:
         self.fail_count = 0
         self.failed_to_get_parsable_items = False
         self.unexpected_failure_occured = False
-        self.parsable_items = []
-        self.parsed_items = []
+        self.parsable_items: list[ParsableItem] = []
+        self.parsed_items: list[Any] = []
 
     @property
     def name(self) -> str:
@@ -74,11 +74,13 @@ class Gruel:
         url: str,
         method: str = "get",
         headers: dict[str, str] = {},
-        params: dict | None = None,
-        data: dict | None = None,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
         timeout: int | None = None,
         retry_on_fail: bool = True,
         json_: Any | None = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> requests.Response:
         """Send a request to `url` and return the `requests.Response` object.
 
@@ -88,9 +90,9 @@ class Gruel:
 
         If `retry_on_fail` is `True`, the request will be repeated after 1 second if the originally request causes an exception to be thrown.
         Otherwise, the exception will be raised."""
-        args = [method, url]
+        request_args = [method, url]
         headers = whosyouragent.get_header() | headers
-        kwargs = {
+        request_kwargs = {
             "headers": headers,
             "timeout": timeout,
             "params": params,
@@ -98,12 +100,12 @@ class Gruel:
             "json": json_,
         }
         try:
-            response = requests.request(*args, **kwargs)
+            response = requests.request(*request_args, **request_kwargs)
             return response
         except Exception as e:
             if retry_on_fail:
                 time.sleep(1)
-                return requests.request(*args, **kwargs)
+                return requests.request(*request_args, **request_kwargs)
             else:
                 raise e
 
@@ -133,14 +135,14 @@ class Gruel:
         """Chores to do after scraping."""
         loggi.close(self.logger)
 
-    def get_parsable_items(self) -> list[ParsableItem]:
+    def get_parsable_items(self) -> list[Any]:
         """Get relevant webpages and extract raw data that needs to be parsed.
 
         e.g. first 10 results for an endpoint that returns json content
         >>> return self.get_page(some_url).json()[:10]"""
         raise NotImplementedError
 
-    def parse_item(self, item: ParsableItem) -> Any:
+    def parse_item(self, item: Any) -> Any:
         """Parse `item` and return parsed data.
 
         e.g.
@@ -155,7 +157,7 @@ class Gruel:
         >>>     return None"""
         raise NotImplementedError
 
-    def store_item(self, item: Any):
+    def store_item(self, item: Any) -> Any:
         """Store `item`."""
         raise NotImplementedError
 

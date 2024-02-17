@@ -27,7 +27,7 @@ addopts = ["--import-mode=importlib"]
 pythonpath = "src"
 
 [tool.hatch.build.targets.sdist]
-exclude = [".coverage", ".pytest_cache", ".vscode", "tests", ".gitignore"]
+exclude = [".coverage", ".pytest_cache", ".vscode", "tests", "htmlcov","docs","*log*","*.md"]
 
 [build-system]
 requires = ["hatchling"]

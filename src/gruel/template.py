@@ -26,6 +26,6 @@ class SubGruel(Gruel):
         >>>     return None"""
         raise NotImplementedError
 
-    def store_item(self, item: Any):
+    def store_item(self, item: Any) -> Any:
         """Store `item`."""
         raise NotImplementedError

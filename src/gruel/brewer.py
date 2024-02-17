@@ -58,7 +58,7 @@ class GruelFinder:
 
     def get_bases(self, object: Any) -> list[Any]:
         """Returns a recursive list of all the classes `object` inherits from."""
-        parents = []
+        parents: list[Any] = []
         bases = object.__bases__
         if not bases:
             return parents
@@ -116,7 +116,7 @@ class GruelFinder:
     def find(self) -> list[Type[Gruel]]:
         """Run the scan and return `Gruel` subclasses."""
         files = self.glob_files()
-        modules = []
+        modules: list[ModuleType] = []
         for file in files:
             if module := self.load_module_from_file(file):
                 modules.append(module)
@@ -148,7 +148,7 @@ class Brewer:
 
     def __init__(
         self,
-        scrapers: Sequence[Any],
+        scrapers: Sequence[Type[Gruel]],
         scraper_args: Sequence[Sequence[Any]] = [],
         scraper_kwargs: Sequence[dict[str, Any]] = [],
         log_dir: Pathish | None = None,
@@ -186,8 +186,10 @@ class Brewer:
         self.scrapers = scrapers
         num_scrapers = len(self.scrapers)
         # Pad args and kwargs if there aren't any given
-        self.scraper_args = scraper_args or [[]] * num_scrapers
-        self.scraper_kwargs = scraper_kwargs or [{}] * num_scrapers
+        self.scraper_args: Sequence[Any] = scraper_args or [[]] * num_scrapers
+        self.scraper_kwargs: Sequence[dict[str, Any]] = (
+            scraper_kwargs or [{}] * num_scrapers
+        )
 
     def _init_logger(self, log_dir: Pathish | None = None):
         # When Brewer is subclassed, use that file's stem instead of `brewer`
@@ -220,7 +222,7 @@ class Brewer:
 
         Execution is multithreaded."""
 
-        def execute(scraper, args, kwargs):
+        def execute(scraper: Type[Gruel], args: Sequence[Any], kwargs: dict[str, Any]):
             return scraper(*args, **kwargs).scrape()
 
         pool = quickpool.ThreadPool(
