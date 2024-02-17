@@ -1,7 +1,7 @@
 [project]
 name = "gruel"
 description = "Another scraping framework"
-version = "2.1.1"
+version = "3.0.0"
 dependencies = ["pathier", "printbuddies", "younotyou", "noiftimer", "requests", "whosyouragent", "quickpool", "loggi", "beautifulsoup4"]
 readme = "README.md"
 keywords = ["scrape", "scraping", "webscraping", "webscraper", "beautifulsoup", "framework"]
@@ -27,7 +27,7 @@ addopts = ["--import-mode=importlib"]
 pythonpath = "src"
 
 [tool.hatch.build.targets.sdist]
-exclude = [".coverage", ".pytest_cache", ".vscode", "tests", "htmlcov","docs","*log*","*.md"]
+exclude = [".coverage", ".pytest_cache", ".vscode", "tests", "htmlcov", "docs", "*log*", "*.md"]
 
 [build-system]
 requires = ["hatchling"]
