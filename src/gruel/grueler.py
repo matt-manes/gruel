@@ -8,7 +8,7 @@ import whosyouragent
 from bs4 import BeautifulSoup, Tag
 from noiftimer import Timer
 from pathier import Pathier, Pathish
-from printbuddies import ProgBar
+from printbuddies import track
 
 ParsableItem = dict[str, Any] | str | Tag
 
@@ -159,25 +159,14 @@ class Gruel:
         """Store `item`."""
         raise NotImplementedError
 
-    def _parse_items_no_prog_bar(self):
-        for item in self.parsable_items:
+    def parse_items(self, show_progress: bool) -> Any:
+        for item in track(self.parsable_items, disable=not show_progress):
             parsed_item = self.parse_item(item)
             if parsed_item:
                 self.store_item(parsed_item)
             # Append to `self.parsable_items` even if `None`
             # so `parsable_items` and `parsed_items` are equal length
             self.parsed_items.append(parsed_item)
-
-    def _parse_items_prog_bar(self):
-        with ProgBar(len(self.parsable_items)) as bar:
-            for item in self.parsable_items:
-                parsed_item = self.parse_item(item)
-                if parsed_item:
-                    self.store_item(parsed_item)
-                    bar.display(f"{bar.runtime}")
-                # Append to `self.parsable_items` even if `None`
-                # so `parsable_items` and `parsed_items` are equal length
-                self.parsed_items.append(parsed_item)
 
     def scrape(self, parse_items_prog_bar_display: bool = False):
         """Run the scraper:
@@ -198,10 +187,7 @@ class Gruel:
                 self.failed_to_get_parsable_items = True
                 self.logger.exception(f"Error in {self.name}:get_parsable_items().")
             else:
-                if parse_items_prog_bar_display:
-                    self._parse_items_prog_bar()
-                else:
-                    self._parse_items_no_prog_bar()
+                self.parse_items(parse_items_prog_bar_display)
                 self.logger.info(
                     f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
                 )
