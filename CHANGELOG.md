@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.0.1 (2024-02-17)
+
+#### Refactorings
+
+* use disable param of `track` instead of ifelse statement
+
+
 ## v3.0.0 (2024-02-17)
 
 #### Refactorings
