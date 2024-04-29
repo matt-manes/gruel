@@ -10,8 +10,6 @@ from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import track
 
-ParsableItem = dict[str, Any] | str | Tag
-
 
 def request(
     url: str,
@@ -86,7 +84,7 @@ class Gruel:
         self.fail_count = 0
         self.failed_to_get_parsable_items = False
         self.unexpected_failure_occured = False
-        self.parsable_items: list[ParsableItem] = []
+        self.parsable_items: list[Any] = []
         self.parsed_items: list[Any] = []
 
     @property

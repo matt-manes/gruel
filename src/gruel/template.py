@@ -1,17 +1,17 @@
 from typing import Any
 
-from gruel import Gruel, ParsableItem
+from gruel import Gruel
 
 
 class SubGruel(Gruel):
-    def get_parsable_items(self) -> list[ParsableItem]:
+    def get_parsable_items(self) -> list[Any]:
         """Get relevant webpages and extract raw data that needs to be parsed.
 
         e.g. first 10 results for an endpoint that returns json content
         >>> return self.request(some_url).json()[:10]"""
         raise NotImplementedError
 
-    def parse_item(self, item: ParsableItem) -> Any:
+    def parse_item(self, item: Any) -> Any:
         """Parse `item` and return parsed data.
 
         e.g.
