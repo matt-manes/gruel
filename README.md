@@ -6,7 +6,6 @@ Another scraping framework
 
 Install with:
 
-<pre>
+```console
 pip install gruel
-</pre>
-
+```
