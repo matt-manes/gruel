@@ -1,9 +1,12 @@
 from typing import Any
 
+from typing_extensions import override
+
 from gruel import Gruel
 
 
 class SubGruel(Gruel):
+    @override
     def get_parsable_items(self) -> list[Any]:
         """Get relevant webpages and extract raw data that needs to be parsed.
 
@@ -11,6 +14,7 @@ class SubGruel(Gruel):
         >>> return self.request(some_url).json()[:10]"""
         raise NotImplementedError
 
+    @override
     def parse_item(self, item: Any) -> Any:
         """Parse `item` and return parsed data.
 
@@ -26,6 +30,7 @@ class SubGruel(Gruel):
         >>>     return None"""
         raise NotImplementedError
 
+    @override
     def store_item(self, item: Any) -> Any:
         """Store `item`."""
         raise NotImplementedError
