@@ -26,13 +26,12 @@ class Gruel:
     If overriding `self.scrape()`, make a call to `loggi.close(self.logger)` at the end of the function,
     otherwise running a large number of scrapers can cause file handle limit issues."""
 
-    def __init__(self, name: str | None = None, log_dir: Pathish | None = None):
+    def __init__(self, name: str | None = None, log_dir: Pathish = "logs"):
         """
         :params:
         * `name`: The name of this scraper. If `None`, the name will be the stem of the file this class/subclass was defined in.
         i.e. A `Gruel` subclass located in a file called `myscraper.py` will have the name `"myscraper"`.
         * `log_dir`: The directory this scraper's logs should be saved to.
-        If `None`, the logs will be written to a folder called `"gruel_logs"` within the current working directory.
         """
         self._name = name
         self._init_logger(log_dir)
@@ -58,8 +57,8 @@ class Gruel:
             or self.unexpected_failure_occured
         )
 
-    def _init_logger(self, log_dir: Pathish | None):
-        log_dir = Pathier.cwd() / "gruel_logs" if not log_dir else Pathier(log_dir)
+    def _init_logger(self, log_dir: Pathish = "logs"):
+        log_dir = Pathier(log_dir)
         self.logger = loggi.getLogger(self.name, log_dir)
 
     # |==============================================================================|

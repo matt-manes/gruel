@@ -24,7 +24,7 @@ class GruelFinder:
         scan_path: Pathier | None = None,
         file_include_patterns: list[str] = ["*.py"],
         recursive: bool = True,
-        log_dir: Pathish | None = None,
+        log_dir: Pathish = "logs",
     ):
         """#### :params:
 
@@ -41,7 +41,6 @@ class GruelFinder:
         `recursive`: Whether the scan should be recursive or not.
 
         `log_dir`: The directory this instance's log should be saved to.
-        If `None`, it will be saved to the current working directory.
 
         Will find and load all classes in the "scrapers" directory that inherit from `Gruel`
         and start with "MySubGruel", but don't contain "Scratch" in the name:
@@ -52,9 +51,7 @@ class GruelFinder:
         self.scan_path = scan_path or Pathier.cwd()
         self.file_include_patterns = file_include_patterns
         self.recursive = recursive
-        self.logger = loggi.getLogger(
-            "gruel_finder", Pathier(log_dir) if log_dir else Pathier.cwd()
-        )
+        self.logger = loggi.getLogger("gruel_finder", Pathier(log_dir))
 
     def get_bases(self, object: Any) -> list[Any]:
         """Returns a recursive list of all the classes `object` inherits from."""
@@ -151,7 +148,7 @@ class Brewer:
         scrapers: Sequence[Type[Gruel]],
         scraper_args: Sequence[Sequence[Any]] = [],
         scraper_kwargs: Sequence[dict[str, Any]] = [],
-        log_dir: Pathish | None = None,
+        log_dir: Pathish = "logs",
     ):
         """#### :params:
 
@@ -163,7 +160,7 @@ class Brewer:
 
         `scraper_kwargs`: A list of dictionaries where each dictionary is a set of keyword arguments to be passed to the corresponding scraper's `__init__` function.
 
-        `log_dir`: The directory to store `Brewer` logs in. Defaults to the current working directory.
+        `log_dir`: The directory to store `Brewer` logs in. Defaults to "logs".
 
         e.g.
         >>> class MyGruel(Gruel):
@@ -191,9 +188,9 @@ class Brewer:
             scraper_kwargs or [{}] * num_scrapers
         )
 
-    def _init_logger(self, log_dir: Pathish | None = None):
+    def _init_logger(self, log_dir: Pathish = "logs"):
         # When Brewer is subclassed, use that file's stem instead of `brewer`
-        log_dir = Pathier(log_dir) if log_dir else Pathier.cwd()
+        log_dir = Pathier(log_dir)
         source_file = inspect.getsourcefile(type(self))
         if source_file:
             log_name = Pathier(source_file).stem
@@ -300,7 +297,7 @@ def get_args() -> argparse.Namespace:
         "-l",
         "--log_dir",
         type=str,
-        default=None,
+        default="logs",
         help=""" The directory to save the brew log to.""",
     )
     args = parser.parse_args()
