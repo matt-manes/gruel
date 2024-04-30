@@ -31,6 +31,9 @@ class Response(requests.Response):
         return self
 
 
+retry_on_codes = [408, 413, 444, 499, 500, 502, 503, 504]
+
+
 class Session(requests.Session):
     @override
     def __init__(
@@ -39,6 +42,7 @@ class Session(requests.Session):
         clear_cookies: bool = True,
         retry_count: int = 3,
         retry_backoff_factor: float = 0.1,
+        retry_on_codes: list[int] = retry_on_codes,
         logger: loggi.Logger | logging.Logger | None = None,
     ):
         """
@@ -49,13 +53,18 @@ class Session(requests.Session):
         `clear_cookies`: If `True`, cookies will be cleared from the session prior to each request.
         `retry_count`: The number of times to retry a failed request.
         `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
+        `retry_on_codes`: List of status codes to retry requests on. Default is `[408, 413, 444, 499, 500, 502, 503, 504]`.
         `logger`: A logging instance to use.
         """
         super().__init__()
         self.randomize_useragent = randomize_useragent
         self.clear_cookies = clear_cookies
         self.timeout = 10
-        self.set_retry(total=retry_count, backoff_factor=retry_backoff_factor)
+        self.set_retry(
+            total=retry_count,
+            backoff_factor=retry_backoff_factor,
+            status_forcelist=retry_on_codes,
+        )
         self.logger = logger
 
     def set_retry(self, *args: Any, **kwargs: Any):
@@ -87,10 +96,23 @@ class Session(requests.Session):
             self.logger.info(
                 f"Sending a `{request.method}` request to `{request.url}`."
             )
-        response = super().send(request, **kwargs)
+        try:
+            response = super().send(request, **kwargs)
+        except Exception as e:
+            if self.logger:
+                self.logger.exception(
+                    f"`{request.method}` request to `{request.url}` failed."
+                )
+            raise e
         if self.logger:
+            logged_response = response
+            # Without checking `history` all redirected responses will be logged with the same details as the final response
+            for response_ in response.history:
+                if response_.url == request.url:
+                    logged_response = response_
+                    break
             self.logger.info(
-                f"Request completed with status code `{response.status_code}` in {Timer.format_time(response.elapsed.total_seconds(), True)}."
+                f"Request to `{request.url}` completed with status code `{logged_response.status_code}` in {Timer.format_time(logged_response.elapsed.total_seconds(), True)}."
             )
         return response
 
@@ -100,6 +122,7 @@ def request(
     method: str = "get",
     retry_count: int = 3,
     retry_backoff_factor: float = 0.1,
+    retry_on_codes: list[int] = retry_on_codes,
     logger: loggi.Logger | logging.Logger | None = None,
     *args: Any,
     **kwargs: Any,
@@ -113,6 +136,7 @@ def request(
     * `retry_count`: The number of times to retry a failed request.
     * `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
     * `logger`: A logging instance to use.
+    * `retry_on_codes`: List of status codes to retry requests on. Default is `[408, 413, 444, 499, 500, 502, 503, 504]`.
 
     `params`: dict, list of tuples or bytes to send in the query string for the :class:`Request`.
     `data`: dict, list of tuples, bytes, or file-like object to send in the body of the :class:`Request`.
@@ -140,5 +164,6 @@ def request(
         retry_count=retry_count,
         retry_backoff_factor=retry_backoff_factor,
         logger=logger,
+        retry_on_codes=retry_on_codes,
     ) as session:
         return session.request(method, url, *args, **kwargs)
