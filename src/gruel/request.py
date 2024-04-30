@@ -10,11 +10,18 @@ from whosyouragent import whosyouragent
 
 
 class Response(requests.Response):
+    """Override of `requests.Response` adding the following convenience methods:
+
+    * `get_soup()`
+    """
+
     def get_soup(self, features: str = "html.parser") -> BeautifulSoup:
+        """Returns a `BeautifulSoup` instance for this response."""
         return BeautifulSoup(self.text, features)
 
     @classmethod
     def from_base_response(cls, response: requests.Response) -> Self:
+        """Convert a `requests.Response` object into a `gruel.Response` object."""
         self = cls()
         self.__dict__ = response.__dict__.copy()
         return self
@@ -29,6 +36,14 @@ class Session(requests.Session):
         retry_count: int = 3,
         retry_backoff_factor: float = 0.1,
     ):
+        """Create a `Session` object.
+
+        #### :params:
+        `randomize_useragent`: If `True`, each request will have a randomized `User-Agent` string.
+        `clear_cookies`: If `True`, cookies will be cleared from the session prior to each request.
+        `retry_count`: The number of times to retry a failed request.
+        `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
+        """
         super().__init__()
         self.randomize_useragent = randomize_useragent
         self.clear_cookies = clear_cookies
@@ -36,6 +51,9 @@ class Session(requests.Session):
         self.set_retry(total=retry_count, backoff_factor=retry_backoff_factor)
 
     def set_retry(self, *args: Any, **kwargs: Any):
+        """Set the retry policy for failed requests.
+
+        `*args` and `**kwargs` are any parameters accepted by `urllib3.util.Retry()`."""
         retries = urllib3.util.Retry(*args, **kwargs)
         self.mount("http://", requests.adapters.HTTPAdapter(max_retries=retries))
         self.mount("https://", requests.adapters.HTTPAdapter(max_retries=retries))
@@ -67,6 +85,10 @@ def request(
 
     `url`: URL for the new :class:`Request` object.
     `method`: method for the new :class:`Request` object: ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
+
+    * `retry_count`: The number of times to retry a failed request.
+    * `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
+
     `params`: dict, list of tuples or bytes to send in the query string for the :class:`Request`.
     `data`: dict, list of tuples, bytes, or file-like object to send in the body of the :class:`Request`.
     `json`: A JSON serializable Python object to send in the body of the :class:`Request`.
