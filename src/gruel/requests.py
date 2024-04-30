@@ -13,7 +13,8 @@ from whosyouragent import whosyouragent
 
 
 class Response(requests.Response):
-    """Override of `requests.Response` adding the following convenience methods:
+    """
+    Override of `requests.Response` adding the following convenience methods:
 
     * `get_soup()`
     """
@@ -40,7 +41,8 @@ class Session(requests.Session):
         retry_backoff_factor: float = 0.1,
         logger: loggi.Logger | logging.Logger | None = None,
     ):
-        """Create a `Session` object.
+        """
+        Create a `Session` object.
 
         #### :params:
         `randomize_useragent`: If `True`, each request will have a randomized `User-Agent` string.
