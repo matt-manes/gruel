@@ -1,10 +1,13 @@
+import logging
 from typing import Any
 
+import loggi
 import requests
 import requests.adapters
 import requests.cookies
 import urllib3.util  # type: ignore
 from bs4 import BeautifulSoup
+from noiftimer import Timer
 from typing_extensions import Self, override
 from whosyouragent import whosyouragent
 
@@ -35,6 +38,7 @@ class Session(requests.Session):
         clear_cookies: bool = True,
         retry_count: int = 3,
         retry_backoff_factor: float = 0.1,
+        logger: loggi.Logger | logging.Logger | None = None,
     ):
         """Create a `Session` object.
 
@@ -43,12 +47,14 @@ class Session(requests.Session):
         `clear_cookies`: If `True`, cookies will be cleared from the session prior to each request.
         `retry_count`: The number of times to retry a failed request.
         `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
+        `logger`: A logging instance to use.
         """
         super().__init__()
         self.randomize_useragent = randomize_useragent
         self.clear_cookies = clear_cookies
         self.timeout = 10
         self.set_retry(total=retry_count, backoff_factor=retry_backoff_factor)
+        self.logger = logger
 
     def set_retry(self, *args: Any, **kwargs: Any):
         """Set the retry policy for failed requests.
@@ -71,12 +77,28 @@ class Session(requests.Session):
         response = super().request(*args, **kwargs)
         return Response.from_base_response(response)
 
+    @override
+    def send(
+        self, request: requests.PreparedRequest, **kwargs: Any
+    ) -> requests.Response:
+        if self.logger:
+            self.logger.info(
+                f"Sending a `{request.method}` request to `{request.url}`."
+            )
+        response = super().send(request, **kwargs)
+        if self.logger:
+            self.logger.info(
+                f"Request completed with status code `{response.status_code}` in {Timer.format_time(response.elapsed.total_seconds(), True)}."
+            )
+        return response
+
 
 def request(
     url: str,
     method: str = "get",
     retry_count: int = 3,
     retry_backoff_factor: float = 0.1,
+    logger: loggi.Logger | logging.Logger | None = None,
     *args: Any,
     **kwargs: Any,
 ) -> Response:
@@ -88,6 +110,7 @@ def request(
 
     * `retry_count`: The number of times to retry a failed request.
     * `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
+    * `logger`: A logging instance to use.
 
     `params`: dict, list of tuples or bytes to send in the query string for the :class:`Request`.
     `data`: dict, list of tuples, bytes, or file-like object to send in the body of the :class:`Request`.
@@ -112,6 +135,8 @@ def request(
     `cert`: if String, path to ssl client cert file (.pem). If Tuple, ('cert', 'key') pair.
     """
     with Session(
-        retry_count=retry_count, retry_backoff_factor=retry_backoff_factor
+        retry_count=retry_count,
+        retry_backoff_factor=retry_backoff_factor,
+        logger=logger,
     ) as session:
         return session.request(method, url, *args, **kwargs)
