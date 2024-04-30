@@ -21,11 +21,10 @@ class Gruel:
     2. `self.get_parsable_items()`
     3. `self.parse_item()` for each item returned by `self.get_parsable_items()`
     4. `self.store_item()` for each successfully parsed item
-    5. `self.postscrape_chores()` (only closes this instance's log file unless overridden)
+    5. `self.postscrape_chores()` (does nothing unless overridden)
 
-    When overriding `self.postscrape_chores`, it's recommended to either
-    call `super().postscrape_chores()` or make sure to call `self.log.close()`.
-    Otherwise running a large number of scrapers can cause file handle limit issues."""
+    If overriding `self.scrape()`, make a call to `loggi.close(self.logger)` at the end of the function,
+    otherwise running a large number of scrapers can cause file handle limit issues."""
 
     def __init__(self, name: str | None = None, log_dir: Pathish | None = None):
         """
@@ -72,7 +71,7 @@ class Gruel:
 
     def postscrape_chores(self):
         """Chores to do after scraping."""
-        loggi.close(self.logger)
+        ...
 
     def get_parsable_items(self) -> list[Any]:
         """Get relevant webpages and extract raw data that needs to be parsed.
@@ -136,3 +135,4 @@ class Gruel:
             self.unexpected_failure_occured = True
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")
         self.postscrape_chores()
+        loggi.close(self.logger)
