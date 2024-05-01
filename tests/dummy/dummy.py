@@ -9,12 +9,11 @@ class DummyGruel(Gruel):
         self.check_val = check_val
 
     def scrape(self) -> tuple[int, str]:
+        self.logger.close()
         return self.check_val, self.name
 
 
-class SubDummyGruel(DummyGruel):
-    ...
+class SubDummyGruel(DummyGruel): ...
 
 
-class NotSubGruel:
-    ...
+class NotSubGruel: ...
