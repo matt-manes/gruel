@@ -11,10 +11,10 @@ import quickpool
 from pathier import Pathier, Pathish
 from younotyou import Matcher, younotyou
 
-from .core import Gruel, LoggerMixin
+from .core import Gruel
 
 
-class GruelFinder(LoggerMixin):
+class GruelFinder(loggi.LoggerMixin):
     """Find and load classes that subclass `Gruel`."""
 
     def __init__(
@@ -51,7 +51,7 @@ class GruelFinder(LoggerMixin):
         self.scan_path = scan_path or Pathier.cwd()
         self.file_include_patterns = file_include_patterns
         self.recursive = recursive
-        self._init_logger("gruel_finder", log_dir)
+        self.init_logger("gruel_finder", log_dir)
 
     def get_bases(self, object: Any) -> list[Any]:
         """Returns a recursive list of all the classes `object` inherits from."""
@@ -120,7 +120,7 @@ class GruelFinder(LoggerMixin):
         return self.strain_for_gruel(modules)
 
 
-class Brewer(LoggerMixin):
+class Brewer(loggi.LoggerMixin):
     """Use to do multithreaded execution of a list of scrapers.
 
     Intended to be used with `Gruel` scrapers, but anything with a `scrape` method can be passed.
@@ -179,7 +179,7 @@ class Brewer(LoggerMixin):
         >>> results = brewer.brew()
         >>> print(results)
         >>> [0, 1, 2, 3, 4]"""
-        self._init_logger(log_dir=log_dir)
+        self.init_logger(log_dir=log_dir)
         self.scrapers = scrapers
         num_scrapers = len(self.scrapers)
         # Pad args and kwargs if there aren't any given
