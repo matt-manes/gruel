@@ -11,10 +11,10 @@ import quickpool
 from pathier import Pathier, Pathish
 from younotyou import Matcher, younotyou
 
-from .core import Gruel
+from .core import Gruel, LoggerMixin
 
 
-class GruelFinder:
+class GruelFinder(LoggerMixin):
     """Find and load classes that subclass `Gruel`."""
 
     def __init__(
@@ -51,7 +51,7 @@ class GruelFinder:
         self.scan_path = scan_path or Pathier.cwd()
         self.file_include_patterns = file_include_patterns
         self.recursive = recursive
-        self.logger = loggi.getLogger("gruel_finder", Pathier(log_dir))
+        self._init_logger("gruel_finder", log_dir)
 
     def get_bases(self, object: Any) -> list[Any]:
         """Returns a recursive list of all the classes `object` inherits from."""
@@ -120,7 +120,7 @@ class GruelFinder:
         return self.strain_for_gruel(modules)
 
 
-class Brewer:
+class Brewer(LoggerMixin):
     """Use to do multithreaded execution of a list of scrapers.
 
     Intended to be used with `Gruel` scrapers, but anything with a `scrape` method can be passed.
@@ -179,7 +179,7 @@ class Brewer:
         >>> results = brewer.brew()
         >>> print(results)
         >>> [0, 1, 2, 3, 4]"""
-        self._init_logger(log_dir)
+        self._init_logger(log_dir=log_dir)
         self.scrapers = scrapers
         num_scrapers = len(self.scrapers)
         # Pad args and kwargs if there aren't any given
@@ -187,16 +187,6 @@ class Brewer:
         self.scraper_kwargs: Sequence[dict[str, Any]] = (
             scraper_kwargs or [{}] * num_scrapers
         )
-
-    def _init_logger(self, log_dir: Pathish = "logs"):
-        # When Brewer is subclassed, use that file's stem instead of `brewer`
-        log_dir = Pathier(log_dir)
-        source_file = inspect.getsourcefile(type(self))
-        if source_file:
-            log_name = Pathier(source_file).stem
-        else:
-            log_name = Pathier(__file__).stem
-        self.logger = loggi.getLogger(log_name, log_dir)
 
     def prescrape_chores(self):
         """Override to add any tasks to be done before running the scrapers."""

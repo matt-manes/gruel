@@ -7,7 +7,19 @@ from pathier import Pathier, Pathish
 from printbuddies import track
 
 
-class Gruel:
+class LoggerMixin:
+    def _init_logger(self, name: str | None = None, log_dir: Pathish = "logs"):
+        log_dir = Pathier(log_dir)
+        if not name:
+            source_file = inspect.getsourcefile(type(self))
+            if source_file:
+                name = Pathier(source_file).stem
+            else:
+                name = Pathier(__file__).stem
+        self.logger = loggi.getLogger(name, log_dir)
+
+
+class Gruel(LoggerMixin):
     """Scraper base class.
 
     Classes subclassing `Gruel` need to implement the following methods:
@@ -34,7 +46,7 @@ class Gruel:
         * `log_dir`: The directory this scraper's logs should be saved to.
         """
         self._name = name
-        self._init_logger(log_dir)
+        self._init_logger(self.name, log_dir)
         self.timer = Timer()
         self.success_count = 0
         self.fail_count = 0
@@ -56,10 +68,6 @@ class Gruel:
             or self.failed_to_get_parsable_items
             or self.unexpected_failure_occured
         )
-
-    def _init_logger(self, log_dir: Pathish = "logs"):
-        log_dir = Pathier(log_dir)
-        self.logger = loggi.getLogger(self.name, log_dir)
 
     # |==============================================================================|
     # Overridables
