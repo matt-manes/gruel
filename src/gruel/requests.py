@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from noiftimer import Timer
 from typing_extensions import Self, override
 from whosyouragent import whosyouragent
+import scrapetools
 
 
 class Response(requests.Response):
@@ -17,11 +18,18 @@ class Response(requests.Response):
     Override of `requests.Response` adding the following convenience methods:
 
     * `get_soup()`
+    * `get_linkscraper()`
     """
 
     def get_soup(self, features: str = "html.parser") -> BeautifulSoup:
         """Returns a `BeautifulSoup` instance for this response."""
         return BeautifulSoup(self.text, features)
+
+    def get_linkscraper(self) -> scrapetools.LinkScraper:
+        """Returns a `LinkScraper` object from a `Response`."""
+        linkscraper = scrapetools.LinkScraper(self.text, self.url)
+        linkscraper.scrape_page()
+        return linkscraper
 
     @classmethod
     def from_base_response(cls, response: requests.Response) -> Self:
