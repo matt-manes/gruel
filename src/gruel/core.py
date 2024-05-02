@@ -33,6 +33,7 @@ class ParserMixin:
         raise NotImplementedError
 
     def parse_items(self, parsable_items: list[Any], show_progress: bool) -> list[Any]:
+        """Parse items and store them."""
         parsed_items: list[Any] = []
         for item in track(parsable_items, disable=not show_progress):
             parsed_item = self.parse_item(item)
@@ -124,6 +125,29 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
         """
         kwargs["logger"] = self.logger
         return request(*args, **kwargs)
+
+    def _parse_item_wrapper(self, item: Any) -> Any:
+        try:
+            parsed_item = self.parse_item(item)
+            self.success_count += 1
+            return parsed_item
+        except Exception as e:
+            self.logger.exception("Failure to parse item:")
+            self.logger.error(str(item))
+            self.fail_count += 1
+            return None
+
+    def parse_items(self, parsable_items: list[Any], show_progress: bool) -> list[Any]:
+        parsed_items: list[Any] = []
+        for item in track(parsable_items, disable=not show_progress):
+            parsed_item = self._parse_item_wrapper(item)
+            # Don't store if `None`
+            if parsed_item:
+                self.store_item(parsed_item)
+            # Append to `parsable_items` even if `None`
+            # so `parsable_items` and `parsed_items` are equal length
+            parsed_items.append(parsed_item)
+        return parsed_items
 
     def scrape(
         self, parse_items_prog_bar_display: bool = False, *args: Any, **kwargs: Any
