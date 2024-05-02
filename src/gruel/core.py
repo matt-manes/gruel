@@ -5,6 +5,7 @@ import loggi
 from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import track
+from .requests import Response, request, retry_on_codes
 
 
 class ChoresMixin:
@@ -81,6 +82,48 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
 
         Most commonly just a webpage request and returning a `Response` object."""
         raise NotImplementedError
+
+    def request(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
+        """
+        Note: For convenience, passes this instances logger to the request functions
+
+        Constructs and sends a :class:`Request <Request>`.
+
+        `url`: URL for the new :class:`Request` object.
+        `method`: method for the new :class:`Request` object: ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
+
+        * `retry_count`: The number of times to retry a failed request.
+        * `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
+        * `retry_on_codes`: List of status codes to retry requests on. Default is `[408, 413, 444, 499, 500, 502, 503, 504]`.
+
+        `params`: dict, list of tuples or bytes to send in the query string for the :class:`Request`.
+        `data`: dict, list of tuples, bytes, or file-like object to send in the body of the :class:`Request`.
+        `json`: A JSON serializable Python object to send in the body of the :class:`Request`.
+        `headers`: dict of HTTP Headers to send with the :class:`Request`. The `User-Agent` header will be randomized unless supplied.
+        `cookies`: dict or CookieJar object to send with the :class:`Request`.
+        `files`: dict of ``'name': file-like-objects`` (or ``{'name': file-tuple}``) for multipart encoding upload.
+            ``file-tuple`` can be a 2-tuple ``('filename', fileobj)``, 3-tuple ``('filename', fileobj, 'content_type')``
+            or a 4-tuple ``('filename', fileobj, 'content_type', custom_headers)``, where ``'content-type'`` is a string
+            defining the content type of the given file and ``custom_headers`` a dict-like object containing additional headers
+            to add for the file.
+        `auth`: Auth tuple to enable Basic/Digest/Custom HTTP Auth.
+        `timeout`: float | tuple, How many seconds to wait for the server to send data
+            before giving up, as a float, or a :ref:`(connect timeout, read
+            timeout) <timeouts>` tuple.
+        `allow_redirects`: bool. Enable/disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection. Defaults to ``True``.
+        `proxies`: dict mapping protocol to the URL of the proxy.
+        `verify`: Either a bool, in which case it controls whether we verify
+                the server's TLS certificate, or a string, in which case it must be a path
+                to a CA bundle to use. Defaults to ``True``.
+        `stream`: if ``False``, the response content will be immediately downloaded.
+        `cert`: if String, path to ssl client cert file (.pem). If Tuple, ('cert', 'key') pair.
+        """
+        kwargs["logger"] = self.logger
+        return request(*args, **kwargs)
 
     def scrape(
         self, parse_items_prog_bar_display: bool = False, *args: Any, **kwargs: Any
