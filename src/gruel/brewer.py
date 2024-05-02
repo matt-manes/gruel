@@ -11,7 +11,7 @@ import quickpool
 from pathier import Pathier, Pathish
 from younotyou import Matcher, younotyou
 
-from .core import Gruel
+from .core import ChoresMixin, Gruel
 
 
 class GruelFinder(loggi.LoggerMixin):
@@ -120,7 +120,7 @@ class GruelFinder(loggi.LoggerMixin):
         return self.strain_for_gruel(modules)
 
 
-class Brewer(loggi.LoggerMixin):
+class Brewer(loggi.LoggerMixin, ChoresMixin):
     """Use to do multithreaded execution of a list of scrapers.
 
     Intended to be used with `Gruel` scrapers, but anything with a `scrape` method can be passed.
@@ -187,14 +187,6 @@ class Brewer(loggi.LoggerMixin):
         self.scraper_kwargs: Sequence[dict[str, Any]] = (
             scraper_kwargs or [{}] * num_scrapers
         )
-
-    def prescrape_chores(self):
-        """Override to add any tasks to be done before running the scrapers."""
-        ...
-
-    def postscrape_chores(self):
-        """Override to add any tasks to be done after running the scrapers."""
-        ...
 
     def _prep_scrapers(self) -> list[tuple[Any, Sequence[Any], dict[str, Any]]]:
         return [
