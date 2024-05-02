@@ -7,25 +7,44 @@ from pathier import Pathier, Pathish
 from printbuddies import track
 
 
-class Gruel(loggi.LoggerMixin):
-    """Scraper base class.
+class ChoresMixin:
+    def prescrape_chores(self):
+        """Chores to do before scraping."""
+        ...
 
-    Classes subclassing `Gruel` need to implement the following methods:
+    def postscrape_chores(self):
+        """Chores to do after scraping."""
+        ...
 
-    * `get_parsable_items(self) -> list[Any]`
-    * `parse_item(self, item: Any)->Any`
-    * `store_item(self, item: Any)`
 
-    Calling the `scrape()` method will execute:
-    1. `self.prescrape_chores()` (does nothing unless overridden)
-    2. `self.get_parsable_items()`
-    3. `self.parse_item()` for each item returned by `self.get_parsable_items()`
-    4. `self.store_item()` for each successfully parsed item
-    5. `self.postscrape_chores()` (does nothing unless overridden)
+class ParserMixin:
 
-    If overriding `self.scrape()`, make a call to `loggi.close(self.logger)` at the end of the function,
-    otherwise running a large number of scrapers can cause file handle limit issues."""
+    def get_parsable_items(self, source: Any) -> list[Any]:
+        """Get atomic chunks to be parsed from `source` and return as a list."""
+        raise NotImplementedError
 
+    def parse_item(self, item: Any) -> Any:
+        """Parse `item` and return parsed data."""
+        raise NotImplementedError
+
+    def store_item(self, item: Any) -> Any:
+        """Store `item`."""
+        raise NotImplementedError
+
+    def parse_items(self, parsable_items: list[Any], show_progress: bool) -> list[Any]:
+        parsed_items: list[Any] = []
+        for item in track(parsable_items, disable=not show_progress):
+            parsed_item = self.parse_item(item)
+            # Don't store if `None`
+            if parsed_item:
+                self.store_item(parsed_item)
+            # Append to `parsable_items` even if `None`
+            # so `parsable_items` and `parsed_items` are equal length
+            parsed_items.append(parsed_item)
+        return parsed_items
+
+
+class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
     def __init__(self, name: str | None = None, log_dir: Pathish = "logs"):
         """
         :params:
@@ -57,53 +76,15 @@ class Gruel(loggi.LoggerMixin):
             or self.unexpected_failure_occured
         )
 
-    # |==============================================================================|
-    # Overridables
-    # |==============================================================================|
-    def prescrape_chores(self):
-        """Chores to do before scraping."""
-        ...
+    def get_source(self) -> Any:
+        """Fetch and return source content.
 
-    def postscrape_chores(self):
-        """Chores to do after scraping."""
-        ...
-
-    def get_parsable_items(self) -> list[Any]:
-        """Get relevant webpages and extract raw data that needs to be parsed.
-
-        e.g. first 10 results for an endpoint that returns json content
-        >>> return self.get_page(some_url).json()[:10]"""
+        Most commonly just a webpage request and returning a `Response` object."""
         raise NotImplementedError
 
-    def parse_item(self, item: Any) -> Any:
-        """Parse `item` and return parsed data.
-
-        e.g.
-        >>> try:
-        >>>     parsed = {}
-        >>>     parsed["thing1"] = item["element"].split()[0]
-        >>>     self.successes += 1
-        >>>     return parsed
-        >>> except Exception:
-        >>>     self.logger.exception("message")
-        >>>     self.failures += 1
-        >>>     return None"""
-        raise NotImplementedError
-
-    def store_item(self, item: Any) -> Any:
-        """Store `item`."""
-        raise NotImplementedError
-
-    def parse_items(self, show_progress: bool) -> Any:
-        for item in track(self.parsable_items, disable=not show_progress):
-            parsed_item = self.parse_item(item)
-            if parsed_item:
-                self.store_item(parsed_item)
-            # Append to `self.parsable_items` even if `None`
-            # so `parsable_items` and `parsed_items` are equal length
-            self.parsed_items.append(parsed_item)
-
-    def scrape(self, parse_items_prog_bar_display: bool = False):
+    def scrape(
+        self, parse_items_prog_bar_display: bool = False, *args: Any, **kwargs: Any
+    ):
         """Run the scraper:
         1. prescrape chores
         2. get parsable items
@@ -114,18 +95,23 @@ class Gruel(loggi.LoggerMixin):
             self.logger.info("Scrape started.")
             self.prescrape_chores()
             try:
-                self.parsable_items = self.get_parsable_items()
-                self.logger.info(
-                    f"{self.name}:get_parsable_items() returned {(len(self.parsable_items))} items"
-                )
-            except Exception:
-                self.failed_to_get_parsable_items = True
-                self.logger.exception(f"Error in {self.name}:get_parsable_items().")
+                source = self.get_source()
+            except Exception as e:
+                self.logger.exception(f"Error getting source data.")
             else:
-                self.parse_items(parse_items_prog_bar_display)
-                self.logger.info(
-                    f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
-                )
+                try:
+                    self.parsable_items = self.get_parsable_items(source)
+                    self.logger.info(
+                        f"{self.name}:get_parsable_items() returned {(len(self.parsable_items))} items."
+                    )
+                except Exception:
+                    self.failed_to_get_parsable_items = True
+                    self.logger.exception(f"Error in {self.name}:get_parsable_items().")
+                else:
+                    self.parse_items(self.parsable_items, parse_items_prog_bar_display)
+                    self.logger.info(
+                        f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
+                    )
         except Exception:
             self.unexpected_failure_occured = True
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")

@@ -1,15 +1,19 @@
 from typing_extensions import Any, override
 from pathier import Pathier, Pathish
-from gruel import Gruel, request
+from gruel import Gruel, request, Response
 
 root = Pathier(__file__).parent
 
 
 class DummyGruel(Gruel):
     @override
-    def get_parsable_items(self) -> list[dict[str, Any]]:
+    def get_source(self, *args: Any, **kwargs: Any) -> Any:
         url = "https://httpbin.org/json"
-        return [request(url, logger=self.logger).json()]
+        return request(url, logger=self.logger)
+
+    @override
+    def get_parsable_items(self, source: Response) -> list[dict[str, Any]]:
+        return [source.json()]
 
     @override
     def parse_item(self, item: dict[str, Any]) -> list[str]:

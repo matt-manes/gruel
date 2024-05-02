@@ -7,7 +7,14 @@ from gruel import Gruel
 
 class SubGruel(Gruel):
     @override
-    def get_parsable_items(self) -> list[Any]:
+    def get_source(self) -> Any:
+        """Fetch and return source content.
+
+        Most commonly just a webpage request and returning a `Response` object."""
+        raise NotImplementedError
+
+    @override
+    def get_parsable_items(self, source: Any) -> list[Any]:
         """Get relevant webpages and extract raw data that needs to be parsed.
 
         e.g. first 10 results for an endpoint that returns json content
