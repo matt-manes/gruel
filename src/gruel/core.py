@@ -1,11 +1,12 @@
 import inspect
-from typing import Any
 
 import loggi
 from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import track
-from .requests import Response, request, retry_on_codes
+from typing_extensions import Any, override
+
+from .requests import Response, request
 
 
 class ChoresMixin:
@@ -33,17 +34,50 @@ class ParserMixin:
         raise NotImplementedError
 
     def parse_items(self, parsable_items: list[Any], show_progress: bool) -> list[Any]:
-        """Parse items and store them."""
+        """Parse items and return them."""
         parsed_items: list[Any] = []
         for item in track(parsable_items, disable=not show_progress):
-            parsed_item = self.parse_item(item)
-            # Don't store if `None`
-            if parsed_item:
-                self.store_item(parsed_item)
-            # Append to `parsable_items` even if `None`
-            # so `parsable_items` and `parsed_items` are equal length
+            parsed_item = self.parse_item_wrapper(item)
             parsed_items.append(parsed_item)
         return parsed_items
+
+    def parse_item_wrapper(self, item: Any) -> Any:
+        """
+        Override this to control what happens around `self.parse_item()` everytime it's called.
+
+        This way related subclasses can have the same auxillary things happen on calls to `parse_item`
+        while having different `parse_item` implementations.
+
+        When overriding, you should call `parse_item`, pass it `item`, and return the result.
+
+        Without overriding, this function simply calls and returns `self.parse_item(item)`.
+
+        basic e.g.:
+        >>> def parse_item_wrapper(self, item:Any)->Any:
+        >>>   try:
+        >>>     return self.parse_item(item)
+        >>>   except Exception as e:
+        >>>     print(e)
+        """
+        return self.parse_item(item)
+
+
+class ScraperData:
+    def __init__(self):
+        self.timer: Timer = Timer()
+        self.success_count: int = 0
+        self.fail_count: int = 0
+        self.failed_to_get_parsable_items: bool = False
+        self.unexpected_failure_occured: bool = False
+
+    @property
+    def had_failures(self) -> bool:
+        """`True` if getting parsable items, parsing items, or unexpected failures occured."""
+        return (
+            (self.fail_count > 0)
+            or self.failed_to_get_parsable_items
+            or self.unexpected_failure_occured
+        )
 
 
 class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
@@ -79,9 +113,9 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
         )
 
     def get_source(self) -> Any:
-        """Fetch and return source content.
+        """Should fetch and return the raw data to be scraped.
 
-        Most commonly just a webpage request and returning a `Response` object."""
+        Typically would request a webpage and return the response."""
         raise NotImplementedError
 
     def request(
@@ -126,7 +160,9 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
         kwargs["logger"] = self.logger
         return request(*args, **kwargs)
 
-    def _parse_item_wrapper(self, item: Any) -> Any:
+    @override
+    def parse_item_wrapper(self, item: Any) -> Any:
+        """Returns a parsed item or `None` if parsing failed."""
         try:
             parsed_item = self.parse_item(item)
             self.success_count += 1
@@ -137,25 +173,12 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
             self.fail_count += 1
             return None
 
-    def parse_items(self, parsable_items: list[Any], show_progress: bool) -> list[Any]:
-        parsed_items: list[Any] = []
-        for item in track(parsable_items, disable=not show_progress):
-            parsed_item = self._parse_item_wrapper(item)
-            # Don't store if `None`
-            if parsed_item:
-                self.store_item(parsed_item)
-            # Append to `parsable_items` even if `None`
-            # so `parsable_items` and `parsed_items` are equal length
-            parsed_items.append(parsed_item)
-        return parsed_items
-
-    def scrape(
-        self, parse_items_prog_bar_display: bool = False, *args: Any, **kwargs: Any
-    ):
+    def scrape(self, parse_items_prog_bar_display: bool = False):
         """Run the scraper:
         1. prescrape chores
         2. get parsable items
-        3. parse and store items
+        3. parse items
+        4. store items
         5. postscrape chores"""
         try:
             self.timer.start()
@@ -175,10 +198,14 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
                     self.failed_to_get_parsable_items = True
                     self.logger.exception(f"Error in {self.name}:get_parsable_items().")
                 else:
-                    self.parse_items(self.parsable_items, parse_items_prog_bar_display)
+                    self.parsed_items = self.parse_items(
+                        self.parsable_items, parse_items_prog_bar_display
+                    )
                     self.logger.info(
                         f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
                     )
+            for item in self.parsed_items:
+                self.store_item(item)
         except Exception:
             self.unexpected_failure_occured = True
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")
