@@ -1,3 +1,4 @@
+import abc
 import inspect
 
 import loggi
@@ -10,16 +11,22 @@ from .requests import Response, request
 
 
 class ChoresMixin:
-    def prescrape_chores(self):
-        """Chores to do before scraping."""
-        ...
+    """Adds `prescrape_chores` and `postscrape_chores` methods to inheriting classes."""
 
     def postscrape_chores(self):
         """Chores to do after scraping."""
         ...
 
+    # ? def interscrape_chores(self):
 
-class ParserMixin:
+    def prescrape_chores(self):
+        """Chores to do before scraping."""
+        ...
+
+
+class ParserMixin(abc.ABC):
+    """Core parser functionality for scraper classes."""
+
     def __init__(self):
         super().__init__()
         self.flush_items()
@@ -29,23 +36,13 @@ class ParserMixin:
         self.parsable_items: list[Any] = []
         self.parsed_items: list[Any] = []
 
+    @abc.abstractmethod
     def get_parsable_items(self, source: Any) -> list[Any]:
         """Get atomic chunks to be parsed from `source` and return as a list."""
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def parse_item(self, item: Any) -> Any:
         """Parse `item` and return parsed data."""
-        raise NotImplementedError
-
-    def parse_items(
-        self, parsable_items: Sequence[Any], show_progress: bool
-    ) -> list[Any]:
-        """Parse items and return them."""
-        parsed_items: list[Any] = []
-        for item in track(parsable_items, disable=not show_progress):
-            parsed_item = self.parse_item_wrapper(item)
-            parsed_items.append(parsed_item)
-        return parsed_items
 
     def parse_item_wrapper(self, item: Any) -> Any:
         """
@@ -69,8 +66,20 @@ class ParserMixin:
         """
         return self.parse_item(item)
 
+    def parse_items(
+        self, parsable_items: Sequence[Any], show_progress: bool
+    ) -> list[Any]:
+        """Parse items and return them."""
+        parsed_items: list[Any] = []
+        for item in track(parsable_items, disable=not show_progress):
+            parsed_item = self.parse_item_wrapper(item)
+            parsed_items.append(parsed_item)
+        return parsed_items
+
 
 class ScraperMetricsMixin:
+    """Mixin for various run time scraper stats."""
+
     def __init__(self):
         super().__init__()
         self.timer: Timer = Timer()
@@ -83,7 +92,7 @@ class ScraperMetricsMixin:
     def had_failures(self) -> bool:
         """`True` if getting parsable items, parsing items, or unexpected failures occured."""
         return (
-            (self.fail_count > 0)
+            self.fail_count > 0
             or self.failed_to_get_parsable_items
             or self.unexpected_failure_occured
         )
@@ -106,21 +115,26 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
         """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
+    @abc.abstractmethod
     def get_source(self) -> Any:
         """Should fetch and return the raw data to be scraped.
 
         Typically would request a webpage and return the response."""
-        raise NotImplementedError
 
-    def store_items(self, items: Sequence[Any]) -> None:
-        """Store parsed items."""
-        raise NotImplementedError
+    @override
+    def parse_item_wrapper(self, item: Any) -> Any:
+        """Returns a parsed item or `None` if parsing failed."""
+        try:
+            parsed_item = self.parse_item(item)
+            self.success_count += 1
+            return parsed_item
+        except Exception as e:
+            self.logger.exception("Failure to parse item:")
+            self.logger.error(str(item))
+            self.fail_count += 1
+            return None
 
-    def request(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Response:
+    def request(self, *args: Any, **kwargs: Any) -> Response:
         """
         Note: For convenience, passes this instances logger to the request functions
 
@@ -158,19 +172,6 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
         kwargs["logger"] = self.logger
         return request(*args, **kwargs)
 
-    @override
-    def parse_item_wrapper(self, item: Any) -> Any:
-        """Returns a parsed item or `None` if parsing failed."""
-        try:
-            parsed_item = self.parse_item(item)
-            self.success_count += 1
-            return parsed_item
-        except Exception as e:
-            self.logger.exception("Failure to parse item:")
-            self.logger.error(str(item))
-            self.fail_count += 1
-            return None
-
     def scrape(self, parse_items_prog_bar_display: bool = False):
         """Run the scraper:
         1. prescrape chores
@@ -190,7 +191,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
                 try:
                     self.parsable_items = self.get_parsable_items(source)
                     self.logger.info(
-                        f"{self.name}:get_parsable_items() returned {(len(self.parsable_items))} items."
+                        f"{self.name}:get_parsable_items() returned {len(self.parsable_items)} items."
                     )
                 except Exception:
                     self.failed_to_get_parsable_items = True
@@ -208,3 +209,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")
         self.postscrape_chores()
         self.logger.close()
+
+    @abc.abstractmethod
+    def store_items(self, items: Sequence[Any]) -> None:
+        """Store parsed items."""
