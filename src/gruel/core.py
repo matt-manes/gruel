@@ -4,7 +4,7 @@ import loggi
 from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import track
-from typing_extensions import Any, override
+from typing_extensions import Any, Sequence, override
 
 from .requests import Response, request
 
@@ -20,6 +20,14 @@ class ChoresMixin:
 
 
 class ParserMixin:
+    def __init__(self):
+        super().__init__()
+        self.flush_items()
+
+    def flush_items(self):
+        """Flush `parsable_items` and `parsed_items`."""
+        self.parsable_items: list[Any] = []
+        self.parsed_items: list[Any] = []
 
     def get_parsable_items(self, source: Any) -> list[Any]:
         """Get atomic chunks to be parsed from `source` and return as a list."""
@@ -29,11 +37,9 @@ class ParserMixin:
         """Parse `item` and return parsed data."""
         raise NotImplementedError
 
-    def store_item(self, item: Any) -> Any:
-        """Store `item`."""
-        raise NotImplementedError
-
-    def parse_items(self, parsable_items: list[Any], show_progress: bool) -> list[Any]:
+    def parse_items(
+        self, parsable_items: Sequence[Any], show_progress: bool
+    ) -> list[Any]:
         """Parse items and return them."""
         parsed_items: list[Any] = []
         for item in track(parsable_items, disable=not show_progress):
@@ -43,10 +49,12 @@ class ParserMixin:
 
     def parse_item_wrapper(self, item: Any) -> Any:
         """
-        Override this to control what happens around `self.parse_item()` everytime it's called.
+        Override this to control what happens around `self.parse_item()` for each item (error handling etc.).
 
         This way related subclasses can have the same auxillary things happen on calls to `parse_item`
         while having different `parse_item` implementations.
+
+        This method will be called by `parse_items` for each item.
 
         When overriding, you should call `parse_item`, pass it `item`, and return the result.
 
@@ -62,8 +70,9 @@ class ParserMixin:
         return self.parse_item(item)
 
 
-class ScraperData:
+class ScraperMetricsMixin:
     def __init__(self):
+        super().__init__()
         self.timer: Timer = Timer()
         self.success_count: int = 0
         self.fail_count: int = 0
@@ -80,7 +89,7 @@ class ScraperData:
         )
 
 
-class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
+class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
     def __init__(self, name: str | None = None, log_dir: Pathish = "logs"):
         """
         :params:
@@ -88,34 +97,23 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
         i.e. A `Gruel` subclass located in a file called `myscraper.py` will have the name `"myscraper"`.
         * `log_dir`: The directory this scraper's logs should be saved to.
         """
+        super().__init__()
         self._name = name
         self.init_logger(self.name, log_dir)
-        self.timer = Timer()
-        self.success_count = 0
-        self.fail_count = 0
-        self.failed_to_get_parsable_items = False
-        self.unexpected_failure_occured = False
-        self.parsable_items: list[Any] = []
-        self.parsed_items: list[Any] = []
 
     @property
     def name(self) -> str:
         """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
-    @property
-    def had_failures(self) -> bool:
-        """`True` if getting parsable items, parsing items, or unexpected failures occured."""
-        return (
-            (self.fail_count > 0)
-            or self.failed_to_get_parsable_items
-            or self.unexpected_failure_occured
-        )
-
     def get_source(self) -> Any:
         """Should fetch and return the raw data to be scraped.
 
         Typically would request a webpage and return the response."""
+        raise NotImplementedError
+
+    def store_items(self, items: Sequence[Any]) -> None:
+        """Store parsed items."""
         raise NotImplementedError
 
     def request(
@@ -204,10 +202,9 @@ class Gruel(loggi.LoggerMixin, ChoresMixin, ParserMixin):
                     self.logger.info(
                         f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
                     )
-            for item in self.parsed_items:
-                self.store_item(item)
+            self.store_items(self.parsed_items)
         except Exception:
             self.unexpected_failure_occured = True
             self.logger.exception(f"Unexpected failure in {self.name}:scrape()")
         self.postscrape_chores()
-        loggi.close(self.logger)
+        self.logger.close()

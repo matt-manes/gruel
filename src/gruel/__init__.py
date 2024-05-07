@@ -1,5 +1,5 @@
 from .brewer import Brewer, GruelFinder
-from .core import ChoresMixin, Gruel, ParserMixin
+from .core import ChoresMixin, Gruel, ParserMixin, ScraperMetricsMixin
 from .crawler import Crawler, CrawlScraper, UrlManager
 from .requests import Response, Session, request, retry_on_codes
 
@@ -17,4 +17,5 @@ __all__ = [
     "UrlManager",
     "Crawler",
     "CrawlScraper",
+    "ScraperMetricsMixin",
 ]
