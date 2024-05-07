@@ -18,10 +18,10 @@ class DummyGruel(Gruel):
     def parse_item(self, item: Any) -> Any:
         return None
 
-    def store_item(self, item: Any) -> Any:
+    def store_items(self, items: Any) -> Any:
         return None
 
-    def scrape(self) -> tuple[int, str]:
+    def scrape(self) -> tuple[int, str]:  # type: ignore
         self.logger.close()
         return self.check_val, self.name
 

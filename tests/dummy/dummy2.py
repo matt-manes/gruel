@@ -1,4 +1,4 @@
-from typing_extensions import Any, override
+from typing_extensions import Any, override, Sequence
 from pathier import Pathier, Pathish
 from gruel import Gruel, request, Response
 
@@ -23,5 +23,5 @@ class DummyGruel(Gruel):
         return titles
 
     @override
-    def store_item(self, item: list[str]):
-        (root / "dummy_data.txt").join(item)
+    def store_items(self, items: Sequence[list[str]]):
+        (root / "dummy_data.txt").join(items[0])
