@@ -780,6 +780,7 @@ The interface is the same as teh original other than some additional parameters 
 <ref refid="6bf32ea7-08a0-11ef-ae4d-a86daada6dc5"/>
 <ref refid="8b6bd737-08a0-11ef-bd92-a86daada6dc5"/>
 <ref refid="d8830cf4-08a4-11ef-abb1-a86daada6dc5"/>
+<ref refid="508260b9-0746-11ef-92e7-a86daada6dc5"/>
 </reflist>
 </ownedType>
 <package>
@@ -818,6 +819,9 @@ The interface is the same as teh original other than some additional parameters 
 <ref refid="a08cdd72-08a4-11ef-b3ca-a86daada6dc5"/>
 </reflist>
 </ownedOperation>
+<package>
+<ref refid="37731709-0746-11ef-a2ca-a86daada6dc5"/>
+</package>
 <presentation>
 <reflist>
 <ref refid="529965f3-0747-11ef-8516-a86daada6dc5"/>
@@ -2417,8 +2421,8 @@ i.e. you have five different files that each implement a Gruel subclass to scrap
 </name>
 <ownedPresentation>
 <reflist>
-<ref refid="6bf35598-08a0-11ef-ba88-a86daada6dc5"/>
 <ref refid="b70452a2-0758-11ef-9648-a86daada6dc5"/>
+<ref refid="6bf35598-08a0-11ef-ba88-a86daada6dc5"/>
 <ref refid="8b6c262c-08a0-11ef-9e2c-a86daada6dc5"/>
 <ref refid="d268da97-08a4-11ef-9d05-a86daada6dc5"/>
 <ref refid="cefc0eef-08a0-11ef-97ba-a86daada6dc5"/>
