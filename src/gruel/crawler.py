@@ -286,7 +286,11 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
 
     @property
     def limits_exceeded(self) -> bool | str:
-        """Check if crawl limits have been exceeded."""
+        """
+        Check if crawl limits have been exceeded.
+
+        If they have, return a message about the limit that was exceeded.
+        """
         message = None
         if self.max_depth_exceeded:
             message = f"Max depth of {self.max_depth} exceeded."
@@ -306,7 +310,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
         """Returns `True` if the crawl has a max depth and it has been exceeded."""
         if not self.max_depth:
             return False
-        return len(self.thread_manager.finished_workers) > self.max_depth
+        return self.thread_manager.num_finished_workers > self.max_depth
 
     @property
     def max_time_exceeded(self) -> bool:
