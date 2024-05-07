@@ -1,7 +1,11 @@
+import abc
 import time
+import urllib.parse
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
+from functools import lru_cache
+
 import loggi
 import scrapetools
 from noiftimer import Timer
@@ -9,16 +13,31 @@ from pathier import Pathier, Pathish
 from printbuddies import Progress, TimerColumn
 from rich import print
 from rich.console import Console
-from typing_extensions import Any, Callable, override, Sequence, Type
-from .core import ChoresMixin, ParserMixin, Gruel
+from rich.progress import ProgressColumn
+from typing_extensions import Any, Callable, Sequence, override
+
+from .core import ChoresMixin, ParserMixin, ScraperMetricsMixin
 from .requests import Response, request
-import urllib.parse
-from functools import lru_cache
 
 root = Pathier(__file__).parent
 
 
 class ThreadManager:
+    """
+    Manages workers when used with `concurrent.futures.ThreadPoolExecutor`.
+
+    Pass the returned future from `concurrent.futures.ThreadPoolExecutor.submit()` to `add_future()`.
+
+    e.g.
+    >>> list_of_functions = [some_function for i in range(1000)]
+    >>> thread_manager = ThreadManager()
+    >>> with concurrent.futures.ThreadPoolExecutor() as executor:
+    >>>   while list_of_functions or thread_manager.unfinished_workers:
+    >>>     if thread_manager.open_slots:
+    >>>       future = executor.submit(list_of_functions.pop())
+    >>>       thread_manager.add_future(future)
+    """
+
     def __init__(self, max_workers: int):
         self.max_workers = max_workers
         self.workers: list[Future[Any]] = []
@@ -27,6 +46,22 @@ class ThreadManager:
     def finished_workers(self) -> list[Future[Any]]:
         """Returns a list of completed workers."""
         return [worker for worker in self.workers if worker.done()]
+
+    @property
+    def num_finished_workers(self) -> int:
+        return len(self.finished_workers)
+
+    @property
+    def num_running_workers(self) -> int:
+        return len(self.running_workers)
+
+    @property
+    def num_unfinished_workers(self) -> int:
+        return len(self.unfinished_workers)
+
+    @property
+    def num_workers(self) -> int:
+        return len(self.workers)
 
     @property
     def open_slots(self) -> int:
@@ -54,7 +89,7 @@ class ThreadManager:
 
     def shutdown(self):
         """Attempt to cancel remaining futures and wait for running futures to finish."""
-        if len(self.finished_workers) < len(self.workers):
+        if self.num_finished_workers < self.num_workers:
             print("Attempting to cancel remaining workers...")
             self.cancel_workers()
         if running_workers := self.running_workers:
@@ -70,6 +105,8 @@ class ThreadManager:
 
 
 class UrlManager:
+    """Manages crawled and uncrawled urls."""
+
     def __init__(self):
         self._crawled: deque[str] = deque()
         self._uncrawled: deque[str] = deque()
@@ -80,40 +117,35 @@ class UrlManager:
 
     @property
     def crawled(self) -> deque[str]:
+        """Urls that have been or are currently being crawled."""
         return self._crawled
-
-    @property
-    def uncrawled(self) -> deque[str]:
-        return self._uncrawled
 
     @property
     def total(self) -> int:
         """Total crawled and uncrawled urls."""
         return len(self._schemeless)
 
-    @lru_cache(None)
-    def strip_scheme(self, url: str) -> str:
-        """Remove the scheme from `url`."""
-        parts = urllib.parse.urlsplit(url)
-        return urllib.parse.urlunsplit(
-            ["", parts.netloc, parts.path, parts.query, parts.fragment]
-        )
+    @property
+    def uncrawled(self) -> deque[str]:
+        """Urls that have yet to be crawled."""
+        return self._uncrawled
+
+    def add_urls(self, urls: Sequence[str]):
+        """Append `urls` to `self.uncrawled_urls`."""
+        for url in urls:
+            self._uncrawled.append(url)
 
     def filter_urls(self, urls: Sequence[str]) -> deque[str]:
         """Filters out duplicate urls and urls already in crawled or uncrawled."""
         filtered_urls: deque[str] = deque()
         for url in set(urls):
+            url = url.strip("/")
             # Prevents duplicates where only diff is http vs https
             schemeless_url = self.strip_scheme(url)
             if schemeless_url not in self._schemeless:
                 self._schemeless.append(schemeless_url)
                 filtered_urls.append(url)
         return filtered_urls
-
-    def add_urls(self, urls: Sequence[str]):
-        """Append `urls` to `self.uncrawled_urls`."""
-        for url in urls:
-            self._uncrawled.append(url)
 
     def get_uncrawled(self) -> str | None:
         """Get an uncrawled url from the front of the list.
@@ -129,8 +161,18 @@ class UrlManager:
                 return url
         return None
 
+    @lru_cache(None)
+    def strip_scheme(self, url: str) -> str:
+        """Remove the scheme from `url`."""
+        parts = urllib.parse.urlsplit(url)
+        return urllib.parse.urlunsplit(
+            ["", parts.netloc, parts.path, parts.query, parts.fragment]
+        )
 
-class CrawlScraper(loggi.LoggerMixin, ParserMixin):
+
+class CrawlScraper(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
+    def __init__(self):
+        super().__init__()
 
     @property
     def limits_exceeded(self) -> bool | str:
@@ -140,7 +182,28 @@ class CrawlScraper(loggi.LoggerMixin, ParserMixin):
         """
         return False
 
-    def scrape(self, source: Response, **kwargs: Any):
+    @override
+    def flush_items(self):
+        self.parsable_items: deque[Any] = deque()  # type: ignore
+        self.parsed_items: deque[Any] = deque()  # type: ignore
+
+    @override
+    def parse_item_wrapper(self, item: Any) -> Any:
+        """Returns a parsed item or `None` if parsing failed."""
+        try:
+            parsed_item = self.parse_item(item)
+            self.success_count += 1
+            return parsed_item
+        except Exception as e:
+            self.logger.exception("Failure to parse item:")
+            self.logger.error(str(item))
+            self.fail_count += 1
+            return None
+
+    def scrape(self, source: Response):
+        """
+        Scrape `source` and store results.
+        """
         try:
             parsable_items = self.get_parsable_items(source)
             self.logger.info(
@@ -149,44 +212,80 @@ class CrawlScraper(loggi.LoggerMixin, ParserMixin):
         except Exception as e:
             self.logger.exception(f"Error getting parsable items from `{source.url}`.")
         else:
-            parsable_items = self.parse_items(parsable_items, False)
+            # Since likely usage is multithreaded,
+            # don't want to pull from shared `self.parsed_items` container
+            # when storing items
+            parsed_items = self.parse_items(parsable_items, False)
+            for item in parsed_items:
+                self.parsed_items.append(item)
+            self.store_items(parsed_items)
+
+    @abc.abstractmethod
+    def store_items(self, items: Sequence[Any]) -> None:
+        """
+        Unless the crawler using this scraper has `max_threads` set to 1,
+        storage method/destination should be thread safe.
+
+        Override this method with `pass` or `...` if you'd rather use a different function
+        to store all parsed items after the crawl is completed.
+        """
 
 
 class Crawler(loggi.LoggerMixin, ChoresMixin):
-    @override
+    """A mutli-threaded web crawler framework."""
+
     def __init__(
         self,
         scraper: CrawlScraper | None = None,
         max_depth: int | None = None,
         max_time: float | None = None,
-        name: str | int | loggi.LogName = loggi.LogName.CLASSNAME,
+        log_name: str | int | loggi.LogName = loggi.LogName.CLASSNAME,
         log_dir: Pathish = "logs",
-        max_threads: int = 3,
+        max_threads: int = 5,
         same_site_only: bool = True,
-        url_manager_class: Type[UrlManager] = UrlManager,
+        custom_url_manager: UrlManager | None = None,
     ):
-        self.init_logger(name, log_dir)
-        self.urls = url_manager_class()
+        """
+        Create a `Crawler` instance.
+
+        #### :params:
+        * `scraper`: An optional `CrawlScraper` or child instance to implement what happens for each crawled page.
+        (NOTE: The `scraper` instance will have its logger set to this crawler's logger.)
+        * `max_depth`: The maximum number of pages to crawl.
+        * `max_time`: The maximum amount of time to crawl in seconds.
+        * `log_name`: The file stem for the log file. Defaults to this instance's class name.
+        * `log_dir`: The directory to write the log file to. Defaults to "logs".
+        * `max_threads`: The max number of threads to use.
+        * `same_site_only`: When `True`, only urls pointing to the same website will be added to the crawl queue.
+        * `custom_url_manager`: An optional instance that inherits from `gruel.UrlManager`.
+        """
+        self.init_logger(log_name, log_dir)
+        self.url_manager = custom_url_manager or UrlManager()
         self.max_time = max_time
         self.max_depth = max_depth
         self.timer = Timer()
         self.same_site_only = same_site_only
         self.thread_manager = ThreadManager(max_threads)
-        self._scraper = scraper
-        if self.scraper:
-            self.scraper.logger = self.logger
+        self._scraper = None
+        if scraper:
+            self.scraper = scraper
 
     @property
-    def scraper(self) -> CrawlScraper | None:
-        return self._scraper
+    def display_columns(self) -> list[ProgressColumn]:
+        """The display columns to be used by the progress bar."""
+        columns = list(Progress.get_default_columns())
+        columns[3] = TimerColumn(True)
+        return columns
 
     @property
     def finished(self) -> bool:
         """Returns `True` if there are no uncrawled urls and no unfinished threads."""
-        return not (self.urls.uncrawled or self.thread_manager.unfinished_workers)
+        return not (
+            self.url_manager.uncrawled or self.thread_manager.unfinished_workers
+        )
 
     @property
-    def limits_exceeded(self) -> bool:
+    def limits_exceeded(self) -> bool | str:
         """Check if crawl limits have been exceeded."""
         message = None
         if self.max_depth_exceeded:
@@ -199,9 +298,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
             else:
                 message = "Scraper limits exceeded."
         if message:
-            print()
-            self.logger.logprint(message)
-            return True
+            return message
         return False
 
     @property
@@ -220,61 +317,96 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
             return self.timer.elapsed > self.max_time
 
     @property
+    def scraper(self) -> CrawlScraper | None:
+        """The scraper being used by this crawler."""
+        return self._scraper
+
+    @scraper.setter
+    def scraper(self, scraper: CrawlScraper):
+        """Set this scraper as the scraper to use and set this crawler's logger to be the scraper's logger."""
+        self._scraper = scraper
+        self._scraper.logger = self.logger
+
+    @property
     def starting_url(self) -> str:
-        return self.urls.crawled[0]
+        """The starting url of the last crawl."""
+        return self._starting_url
 
     def _dispatch_workers(self, executor: ThreadPoolExecutor):
         """Dispatch workers if there are open slots and new urls to be scraped."""
         while self.thread_manager.open_slots:
-            url = self.urls.get_uncrawled()
+            url = self.url_manager.get_uncrawled()
             if url:
                 self.thread_manager.add_future(executor.submit(self._handle_page, url))
             else:
                 break
 
+    def _handle_page(self, url: str):
+        self.logger.info(f"Scraping `{url}`.")
+        response = self.request_page(url)
+        urls = self.extract_crawlable_urls(response.get_linkscraper())
+        new_urls = self.url_manager.filter_urls(urls)
+        self.logger.info(f"Found {len(new_urls)} new urls on `{url}`.")
+        self.url_manager.add_urls(new_urls)
+        if self.scraper:
+            self.scraper.scrape(response)
+
     def crawl(self, starting_url: str):
-        self.timer.start()
-        self.urls.add_urls([starting_url])
+        """Start crawling at `starting_url`."""
+        self._starting_url = starting_url
+        self.url_manager.add_urls([starting_url])
         self.prescrape_chores()
-        self.logger.logprint(
-            f"Starting crawl ({datetime.now():%H:%M:%S}) at {self.starting_url}"
-        )
         with ThreadPoolExecutor(self.thread_manager.max_workers) as executor:
-            columns = list(Progress.get_default_columns())
-            columns[3] = TimerColumn(True)
-            with Progress(*columns) as progress:
-                crawler = progress.add_task()
-                while not self.finished and (not self.limits_exceeded):
-                    self._dispatch_workers(executor)
-                    num_finished = len(self.thread_manager.finished_workers)
-                    total = len(self.thread_manager.workers) + len(self.urls.uncrawled)
-                    progress.update(
-                        crawler,
-                        total=total,
-                        completed=num_finished,
-                        description=f"{num_finished}/{total} urls",
-                    )
-                    time.sleep(0.1)
+            try:
+                with Progress(*self.display_columns) as progress:
+                    crawler = progress.add_task()
+                    while not self.finished and (not self.limits_exceeded):
+                        self._dispatch_workers(executor)
+                        num_finished = self.thread_manager.num_finished_workers
+                        total = self.thread_manager.num_workers + len(
+                            self.url_manager.uncrawled
+                        )
+                        progress.update(
+                            crawler,
+                            total=total,
+                            completed=num_finished,
+                            description=f"{num_finished}/{total} urls",
+                        )
+                        time.sleep(0.1)
+                if message := self.limits_exceeded:
+                    self.logger.logprint(str(message))
+            except KeyboardInterrupt:
+                self.thread_manager.shutdown()
+            except Exception as e:
+                raise e
             self.thread_manager.shutdown()
         self.postscrape_chores()
+        self.logger.close()
 
     def extract_crawlable_urls(self, linkscraper: scrapetools.LinkScraper) -> list[str]:
+        """Returns a list of urls that can be added to the crawl list."""
         return linkscraper.get_links(
             "page",
             excluded_links=linkscraper.get_links("img"),
             same_site_only=self.same_site_only,
         )
 
+    @override
+    def postscrape_chores(self):
+        self.timer.stop()
+        self.logger.logprint(f"Crawl completed in {self.timer.elapsed_str}.")
+        if self.scraper:
+            self.scraper.postscrape_chores()
+
+    @override
+    def prescrape_chores(self):
+        self.timer.start()
+        if self.scraper:
+            self.scraper.prescrape_chores()
+        self.logger.logprint(
+            f"Starting crawl ({datetime.now():%H:%M:%S}) at {self.starting_url}"
+        )
+
     def request_page(self, url: str) -> Response:
         """Make a request to `url` and return the page."""
         return request(url, logger=self.logger)
-
-    def _handle_page(self, url: str):
-        self.logger.info(f"Scraping `{url}`.")
-        response = self.request_page(url)
-        urls = self.extract_crawlable_urls(response.get_linkscraper())
-        new_urls = self.urls.filter_urls(urls)
-        self.logger.info(f"Found {len(new_urls)} new urls on `{url}`.")
-        self.urls.add_urls(new_urls)
-        if self.scraper:
-            self.scraper.scrape(response)
