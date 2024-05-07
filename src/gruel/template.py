@@ -1,6 +1,6 @@
 from typing import Any
 
-from typing_extensions import override
+from typing_extensions import Sequence, override
 
 from gruel import Gruel
 
@@ -23,21 +23,10 @@ class SubGruel(Gruel):
 
     @override
     def parse_item(self, item: Any) -> Any:
-        """Parse `item` and return parsed data.
-
-        e.g.
-        >>> try:
-        >>>     parsed = {}
-        >>>     parsed["thing1"] = item["element"].split()[0]
-        >>>     self.successes += 1
-        >>>     return parsed
-        >>> except Exception:
-        >>>     self.logger.exception("message")
-        >>>     self.failures += 1
-        >>>     return None"""
+        """Parse `item` and return parsed data."""
         raise NotImplementedError
 
     @override
-    def store_item(self, item: Any) -> Any:
+    def store_items(self, items: Sequence[Any]) -> None:
         """Store `item`."""
         raise NotImplementedError
