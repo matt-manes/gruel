@@ -10,7 +10,7 @@ import loggi
 import scrapetools
 from noiftimer import Timer
 from pathier import Pathier, Pathish
-from printbuddies import Progress, TimerColumn
+from printbuddies import ColorMap, Progress, TimerColumn
 from rich import print
 from rich.console import Console
 from rich.progress import ProgressColumn
@@ -20,6 +20,7 @@ from .core import ChoresMixin, ParserMixin, ScraperMetricsMixin
 from .requests import Response, request
 
 root = Pathier(__file__).parent
+color_map = ColorMap()
 
 
 class ThreadManager:
@@ -90,10 +91,12 @@ class ThreadManager:
     def shutdown(self):
         """Attempt to cancel remaining futures and wait for running futures to finish."""
         if self.num_finished_workers < self.num_workers:
-            print("Attempting to cancel remaining workers...")
+            print(f"{color_map.o1}Attempting to cancel remaining workers...")
             self.cancel_workers()
         if running_workers := self.running_workers:
-            print(f"Waiting for {len(running_workers)} workers to finish...")
+            print(
+                f"{color_map.sg2}Waiting for {color_map.c}{len(running_workers)}[/] workers to finish..."
+            )
             num_running: Callable[[list[Future[Any]]], str] = (
                 lambda n: f"[pink1]{len(n)} running workers..."
             )
@@ -170,17 +173,85 @@ class UrlManager:
         )
 
 
+class CrawlLimit(abc.ABC):
+    @property
+    @abc.abstractmethod
+    def exceeded(self) -> bool:
+        """Return whether this limit has been exceeded or not."""
+
+    def __str__(self) -> str:
+        """Customize the message used when this limit is exceeded."""
+        return "Scraper limits exceeded."
+
+    def __rich__(self) -> str:
+        return self.__str__()
+
+
+class MaxDepthLimit(CrawlLimit):
+    def __init__(self, max_depth: int | None, thread_manager: ThreadManager):
+        self.max_depth = max_depth
+        self.thread_manager = thread_manager
+
+    @property
+    @override
+    def exceeded(self) -> bool:
+        if self.max_depth:
+            return self.thread_manager.num_finished_workers > self.max_depth
+        return False
+
+    def __str__(self) -> str:
+        return f"Max depth of {self.max_depth} exceeded."
+
+    def __rich__(self) -> str:
+        return f"Max depth of [bright_red]{self.max_depth}[/] exceeded."
+
+
+class MaxTimeLimit(CrawlLimit):
+    def __init__(self, max_time: float | None, timer: Timer):
+        self.max_time = max_time
+        self.timer = timer
+
+    @property
+    @override
+    def exceeded(self) -> bool:
+        if self.max_time:
+            return self.timer.elapsed > self.max_time
+        return False
+
+    def __str__(self) -> str:
+        return f"Max time of {self.timer.format_time(self.max_time) if self.max_time else 'None'} exceeded."
+
+    def __rich__(self) -> str:
+        return f"Max time of [bright_red]{self.timer.format_time(self.max_time) if self.max_time else 'None'}[/] exceeded."
+
+
+class LimitCheckerMixin:
+    @staticmethod
+    def get_limits(obj: Any) -> list[CrawlLimit]:
+        """Returns a list of `CrawlLimit` instances from `obj`."""
+        return [
+            member
+            for member in obj.__dict__.values()
+            if issubclass(type(member), CrawlLimit)
+        ]
+
+    @property
+    def limits(self) -> list[CrawlLimit]:
+        """Returns a list of `CrawlLimit` objects belonging to this instance."""
+        return self.get_limits(self)
+
+    @property
+    def limits_exceeded(self) -> bool:
+        return any(limit.exceeded for limit in self.limits)
+
+    @property
+    def exceeded_limits(self) -> list[CrawlLimit]:
+        return [limit for limit in self.limits if limit.exceeded]
+
+
 class CrawlScraper(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
     def __init__(self):
         super().__init__()
-
-    @property
-    def limits_exceeded(self) -> bool | str:
-        """Put any scraper conditions here that should tell the crawler to stop crawling.
-
-        Can choose to return a message string detailing what limit was exceeded instead of returning `True`.
-        """
-        return False
 
     @override
     def flush_items(self):
@@ -231,7 +302,7 @@ class CrawlScraper(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMi
         """
 
 
-class Crawler(loggi.LoggerMixin, ChoresMixin):
+class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     """A mutli-threaded web crawler framework."""
 
     def __init__(
@@ -261,11 +332,11 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
         """
         self.init_logger(log_name, log_dir)
         self.url_manager = custom_url_manager or UrlManager()
-        self.max_time = max_time
-        self.max_depth = max_depth
-        self.timer = Timer()
-        self.same_site_only = same_site_only
         self.thread_manager = ThreadManager(max_threads)
+        self.timer = Timer()
+        self.max_time = MaxTimeLimit(max_time, self.timer)
+        self.max_depth = MaxDepthLimit(max_depth, self.thread_manager)
+        self.same_site_only = same_site_only
         self._scraper = None
         if scraper:
             self.scraper = scraper
@@ -285,40 +356,12 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
         )
 
     @property
-    def limits_exceeded(self) -> bool | str:
-        """
-        Check if crawl limits have been exceeded.
-
-        If they have, return a message about the limit that was exceeded.
-        """
-        message = None
-        if self.max_depth_exceeded:
-            message = f"Max depth of {self.max_depth} exceeded."
-        elif self.max_time_exceeded:
-            message = f"Max time of {self.timer.format_time(self.max_time)} exceeded."  # type: ignore
-        if self.scraper and (result := self.scraper.limits_exceeded):
-            if isinstance(result, str):
-                message = result
-            else:
-                message = "Scraper limits exceeded."
-        if message:
-            return message
-        return False
-
-    @property
-    def max_depth_exceeded(self) -> bool:
-        """Returns `True` if the crawl has a max depth and it has been exceeded."""
-        if not self.max_depth:
-            return False
-        return self.thread_manager.num_finished_workers > self.max_depth
-
-    @property
-    def max_time_exceeded(self) -> bool:
-        """Returns `True` if the crawl has a max time and it has been exceeded."""
-        if not self.max_time:
-            return False
-        else:
-            return self.timer.elapsed > self.max_time
+    @override
+    def limits(self) -> list[CrawlLimit]:
+        limits = super().limits
+        if self.scraper:
+            limits.extend(self.get_limits(self.scraper))
+        return limits
 
     @property
     def scraper(self) -> CrawlScraper | None:
@@ -364,7 +407,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
             try:
                 with Progress(*self.display_columns) as progress:
                     crawler = progress.add_task()
-                    while not self.finished and (not self.limits_exceeded):
+                    while not self.finished and not self.limits_exceeded:
                         self._dispatch_workers(executor)
                         num_finished = self.thread_manager.num_finished_workers
                         total = self.thread_manager.num_workers + len(
@@ -377,8 +420,9 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
                             description=f"{num_finished}/{total} urls",
                         )
                         time.sleep(0.1)
-                if message := self.limits_exceeded:
-                    self.logger.logprint(str(message))
+                for limit in self.exceeded_limits:
+                    self.logger.info(str(limit))
+                    print(limit)
             except KeyboardInterrupt:
                 self.thread_manager.shutdown()
             except Exception as e:
@@ -398,7 +442,8 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
     @override
     def postscrape_chores(self):
         self.timer.stop()
-        self.logger.logprint(f"Crawl completed in {self.timer.elapsed_str}.")
+        self.logger.info(f"Crawl completed in {self.timer.elapsed_str}.")
+        print(f"Crawl completed in {color_map.go1}{self.timer.elapsed_str}[/].")
         if self.scraper:
             self.scraper.postscrape_chores()
 
@@ -407,8 +452,10 @@ class Crawler(loggi.LoggerMixin, ChoresMixin):
         self.timer.start()
         if self.scraper:
             self.scraper.prescrape_chores()
-        self.logger.logprint(
-            f"Starting crawl ({datetime.now():%H:%M:%S}) at {self.starting_url}"
+        start_time = f"{datetime.now():%H:%M:%S}"
+        self.logger.info(f"Starting crawl ({start_time}) at {self.starting_url}")
+        print(
+            f"Starting crawl ({color_map.go1}{start_time}[/]) at {color_map.or_}{self.starting_url}"
         )
 
     def request_page(self, url: str) -> Response:
