@@ -21,6 +21,7 @@ from .requests import Response, request
 
 root = Pathier(__file__).parent
 color_map = ColorMap()
+console = Console(style="pink1")
 
 
 class ThreadManager:
@@ -91,11 +92,11 @@ class ThreadManager:
     def shutdown(self):
         """Attempt to cancel remaining futures and wait for running futures to finish."""
         if self.num_finished_workers < self.num_workers:
-            print(f"{color_map.o1}Attempting to cancel remaining workers...")
+            console.print(f"{color_map.o1}Attempting to cancel remaining workers...")
             self.cancel_workers()
         if running_workers := self.running_workers:
-            print(
-                f"{color_map.sg2}Waiting for {color_map.c}{len(running_workers)}[/] workers to finish..."
+            console.print(
+                f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
             num_running: Callable[[list[Future[Any]]], str] = (
                 lambda n: f"[pink1]{len(n)} running workers..."
@@ -398,6 +399,11 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         if self.scraper:
             self.scraper.scrape(response)
 
+    def print_exceeded_limits(self):
+        for limit in self.exceeded_limits:
+            self.logger.info(str(limit))
+            console.print(limit)
+
     def crawl(self, starting_url: str):
         """Start crawling at `starting_url`."""
         self._starting_url = starting_url
@@ -420,9 +426,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
                             description=f"{num_finished}/{total} urls",
                         )
                         time.sleep(0.1)
-                for limit in self.exceeded_limits:
-                    self.logger.info(str(limit))
-                    print(limit)
+                self.print_exceeded_limits()
             except KeyboardInterrupt:
                 self.thread_manager.shutdown()
             except Exception as e:
@@ -443,7 +447,9 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     def postscrape_chores(self):
         self.timer.stop()
         self.logger.info(f"Crawl completed in {self.timer.elapsed_str}.")
-        print(f"Crawl completed in {color_map.go1}{self.timer.elapsed_str}[/].")
+        console.print(
+            f"{color_map.sg3}Crawl completed in {color_map.go1}{self.timer.elapsed_str}[/]."
+        )
         if self.scraper:
             self.scraper.postscrape_chores()
 
@@ -454,7 +460,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
             self.scraper.prescrape_chores()
         start_time = f"{datetime.now():%H:%M:%S}"
         self.logger.info(f"Starting crawl ({start_time}) at {self.starting_url}")
-        print(
+        console.print(
             f"Starting crawl ({color_map.go1}{start_time}[/]) at {color_map.or_}{self.starting_url}"
         )
 
