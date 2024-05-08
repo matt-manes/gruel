@@ -1,6 +1,7 @@
-from typing_extensions import Any, override, Sequence
 from pathier import Pathier, Pathish
-from gruel import Gruel, request, Response
+from typing_extensions import Any, Sequence, override
+
+from gruel import Gruel, Response, request
 
 root = Pathier(__file__).parent
 

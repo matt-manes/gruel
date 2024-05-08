@@ -1,5 +1,5 @@
-from typing_extensions import Any
 from pathier import Pathier
+from typing_extensions import Any
 
 from gruel import Gruel
 
@@ -26,7 +26,9 @@ class DummyGruel(Gruel):
         return self.check_val, self.name
 
 
-class SubDummyGruel(DummyGruel): ...
+class SubDummyGruel(DummyGruel):
+    ...
 
 
-class NotSubGruel: ...
+class NotSubGruel:
+    ...

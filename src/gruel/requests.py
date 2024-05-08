@@ -5,12 +5,12 @@ import loggi
 import requests
 import requests.adapters
 import requests.cookies
+import scrapetools
 import urllib3.util  # type: ignore
 from bs4 import BeautifulSoup
 from noiftimer import Timer
 from typing_extensions import Self, override
 from whosyouragent import whosyouragent
-import scrapetools
 
 
 class Response(requests.Response):
