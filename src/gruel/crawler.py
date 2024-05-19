@@ -13,10 +13,11 @@ from pathier import Pathier, Pathish
 from printbuddies import ColorMap, Progress, TimerColumn
 from rich.console import Console
 from rich.progress import ProgressColumn
+from seleniumuser.seleniumuser import User
 from typing_extensions import Any, Callable, Sequence, override
 
 from .core import ChoresMixin, ParserMixin, ScraperMetricsMixin
-from .requests import Response, request
+from .requests import Response, SeleniumResponse, request
 
 root = Pathier(__file__).parent
 color_map = ColorMap()
@@ -471,3 +472,27 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     def request_page(self, url: str) -> Response:
         """Make a request to `url` and return the page."""
         return request(url, logger=self.logger)
+
+
+class SeleniumCrawler(Crawler):
+    """
+    Requires Firefox to be installed and for `geckodriver.exe` to be in system PATH.
+
+    Currently `max_threads` is hardcoded to `1`.
+    """
+
+    @override
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.thread_manager = ThreadManager(1)
+        self.user = User(True)
+
+    @override
+    def request_page(self, url: str) -> SeleniumResponse:
+        self.user.get(url)
+        return SeleniumResponse.from_selenium_user(self.user)
+
+    @override
+    def crawl(self, starting_url: str):
+        super().crawl(starting_url)
+        self.user.close_browser()

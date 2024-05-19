@@ -9,6 +9,7 @@ import scrapetools
 import urllib3.util  # type: ignore
 from bs4 import BeautifulSoup
 from noiftimer import Timer
+from seleniumuser.seleniumuser import User
 from typing_extensions import Self, override
 from whosyouragent import whosyouragent
 
@@ -36,6 +37,36 @@ class Response(requests.Response):
         """Convert a `requests.Response` object into a `gruel.Response` object."""
         self = cls()
         self.__dict__ = response.__dict__.copy()
+        return self
+
+
+class SeleniumResponse(Response):
+    """
+    For mocking a `Response` type object from a `User` instance.
+
+    Only mocks `url` and `text` variables/properties.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._text = ""
+
+    @property
+    @override
+    def text(self) -> str:
+        return self._text
+
+    @classmethod
+    def from_selenium_user(cls, user: User) -> Self:
+        """
+        Construct a `Response` object from a `seleniumuser.User` instance.
+
+        Pass the `User` instance to this function after using the instance to request a page.
+        """
+        self = cls()
+        self.url = user.current_url()
+        assert user.browser
+        self._text = user.browser.page_source
         return self
 
 
