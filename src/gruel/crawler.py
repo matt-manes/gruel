@@ -11,7 +11,6 @@ import scrapetools
 from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import ColorMap, Progress, TimerColumn
-from rich import print
 from rich.console import Console
 from rich.progress import ProgressColumn
 from typing_extensions import Any, Callable, Sequence, override
@@ -98,9 +97,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -308,7 +307,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
 
     def __init__(
         self,
-        scraper: CrawlScraper | None = None,
+        scrapers: Sequence[CrawlScraper] = [],
         max_depth: int | None = None,
         max_time: float | None = None,
         log_name: str | int | loggi.LogName = loggi.LogName.CLASSNAME,
@@ -338,9 +337,9 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         self.max_time = MaxTimeLimit(max_time, self.timer)
         self.max_depth = MaxDepthLimit(max_depth, self.thread_manager)
         self.same_site_only = same_site_only
-        self._scraper = None
-        if scraper:
-            self.scraper = scraper
+        self._scrapers: list[CrawlScraper] = []
+        for scraper in scrapers:
+            self.register_scraper(scraper)
 
     @property
     def display_columns(self) -> list[ProgressColumn]:
@@ -360,20 +359,25 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     @override
     def limits(self) -> list[CrawlLimit]:
         limits = super().limits
-        if self.scraper:
-            limits.extend(self.get_limits(self.scraper))
+        # ? Should scraper limits only halt that particular scraper or the whole crawl
+        # ? Separate class or flag to have both options
+        for scraper in self.scrapers:
+            limits.extend(self.get_limits(scraper))
         return limits
 
     @property
-    def scraper(self) -> CrawlScraper | None:
+    def scrapers(self) -> list[CrawlScraper]:
         """The scraper being used by this crawler."""
-        return self._scraper
+        return self._scrapers
 
-    @scraper.setter
-    def scraper(self, scraper: CrawlScraper):
-        """Set this scraper as the scraper to use and set this crawler's logger to be the scraper's logger."""
-        self._scraper = scraper
-        self._scraper.logger = self.logger
+    def register_scraper(self, scraper: CrawlScraper):
+        """
+        Add this `scraper` instance to the list of scrapers.
+
+        This `Crawler` instance's logger will be passed to the logger attribute of `scraper`.
+        """
+        scraper.logger = self.logger
+        self._scrapers.append(scraper)
 
     @property
     def starting_url(self) -> str:
@@ -396,8 +400,8 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         new_urls = self.url_manager.filter_urls(urls)
         self.logger.info(f"Found {len(new_urls)} new urls on `{url}`.")
         self.url_manager.add_urls(new_urls)
-        if self.scraper:
-            self.scraper.scrape(response)
+        for scraper in self.scrapers:
+            scraper.scrape(response)
 
     def print_exceeded_limits(self):
         for limit in self.exceeded_limits:
@@ -450,14 +454,14 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         console.print(
             f"{color_map.sg3}Crawl completed in {color_map.go1}{self.timer.elapsed_str}[/]."
         )
-        if self.scraper:
-            self.scraper.postscrape_chores()
+        for scraper in self.scrapers:
+            scraper.postscrape_chores()
 
     @override
     def prescrape_chores(self):
         self.timer.start()
-        if self.scraper:
-            self.scraper.prescrape_chores()
+        for scraper in self.scrapers:
+            scraper.prescrape_chores()
         start_time = f"{datetime.now():%H:%M:%S}"
         self.logger.info(f"Starting crawl ({start_time}) at {self.starting_url}")
         console.print(
