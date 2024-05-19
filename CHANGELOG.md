@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.1.0 (2024-05-19)
+
+#### New Features
+
+* add `SeleniumCrawler` class for crawling with javascript rendering
+
+#### Refactorings
+
+* POTENTIALLY BREAKING `Crawler` takes a sequence of `CrawlScrapers` instead of just one
+
 ## v4.0.0 (2024-05-07)
 
 #### New Features
