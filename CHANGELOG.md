@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.1.1 (2024-05-21)
+
+#### Fixes
+
+* fix max depth limit not working in `SeleniumCrawler` because it's using a stale `ThreadManager` instance
+
+#### Refactorings
+
+* change default crawl threads from 5 to 3
+
 ## v4.1.0 (2024-05-19)
 
 #### New Features
