@@ -12,7 +12,7 @@ from noiftimer import Timer
 from pathier import Pathier, Pathish
 from printbuddies import ColorMap, Progress, TimerColumn
 from rich.console import Console
-from rich.progress import ProgressColumn
+from rich.progress import ProgressColumn, TaskID
 from seleniumuser.seleniumuser import User
 from typing_extensions import Any, Callable, Sequence, override
 
@@ -90,7 +90,7 @@ class ThreadManager:
     @property
     def open_slots(self) -> int:
         """Returns the difference between max_workers and number of running workers."""
-        return self.max_workers - len(self.running_workers)
+        return self.max_workers - self.num_running_workers
 
     @property
     def running_workers(self) -> list[Future[Any]]:
@@ -417,8 +417,10 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     def _dispatch_workers(self, executor: ThreadPoolExecutor):
         """Dispatch workers if there are open slots and new urls to be scraped."""
         while self.thread_manager.open_slots and not self.max_depth.should_block:
+            self.logger.info(f"{self.thread_manager.open_slots=}")
             url = self.url_manager.get_uncrawled()
             if url:
+                self.logger.info(f"Adding `{url}` to the crawl queue.")
                 self.thread_manager.add_future(executor.submit(self._handle_page, url))
             else:
                 break
@@ -438,6 +440,16 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
             self.logger.info(str(limit))
             console.print(limit)
 
+    def _update_progress(self, progress: Progress, task: TaskID):
+        num_completed = self.thread_manager.num_completed_workers
+        total = self.thread_manager.num_workers + len(self.url_manager.uncrawled)
+        progress.update(
+            task,
+            total=total,
+            completed=num_completed,
+            description=f"{num_completed}/{total} urls",
+        )
+
     def crawl(self, starting_url: str):
         """Start crawling at `starting_url`."""
         self._starting_url = starting_url
@@ -449,17 +461,9 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
                     crawler = progress.add_task()
                     while not self.finished and not self.limits_exceeded:
                         self._dispatch_workers(executor)
-                        num_finished = self.thread_manager.num_finished_workers
-                        total = self.thread_manager.num_workers + len(
-                            self.url_manager.uncrawled
-                        )
-                        progress.update(
-                            crawler,
-                            total=total,
-                            completed=num_finished,
-                            description=f"{num_finished}/{total} urls",
-                        )
+                        self._update_progress(progress, crawler)
                         time.sleep(0.1)
+                    self._update_progress(progress, crawler)
                 self.print_exceeded_limits()
             except KeyboardInterrupt:
                 self.thread_manager.shutdown()
