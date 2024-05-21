@@ -45,9 +45,31 @@ class ThreadManager:
         self.workers: list[Future[Any]] = []
 
     @property
+    def cancelled_workers(self) -> list[Future[Any]]:
+        """Returns a list of cancelled workers."""
+        return [worker for worker in self.workers if worker.cancelled()]
+
+    @property
+    def completed_workers(self) -> list[Future[Any]]:
+        """Returns a list of completed workers."""
+        return [
+            worker
+            for worker in self.workers
+            if worker.done() and worker not in self.cancelled_workers
+        ]
+
+    @property
     def finished_workers(self) -> list[Future[Any]]:
         """Returns a list of completed workers."""
         return [worker for worker in self.workers if worker.done()]
+
+    @property
+    def num_cancelled_workers(self) -> int:
+        return len(self.cancelled_workers)
+
+    @property
+    def num_completed_workers(self) -> int:
+        return len(self.completed_workers)
 
     @property
     def num_finished_workers(self) -> int:
@@ -98,9 +120,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
