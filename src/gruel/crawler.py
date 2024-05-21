@@ -219,7 +219,14 @@ class MaxDepthLimit(CrawlLimit):
     @override
     def exceeded(self) -> bool:
         if self.max_depth:
-            return self.thread_manager.num_finished_workers > self.max_depth
+            return self.thread_manager.num_completed_workers >= self.max_depth
+        return False
+
+    @property
+    def should_block(self) -> bool:
+        """Whether adding new workers should be blocked."""
+        if self.max_depth:
+            return self.thread_manager.num_workers >= self.max_depth
         return False
 
     def __str__(self) -> str:
@@ -409,7 +416,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
 
     def _dispatch_workers(self, executor: ThreadPoolExecutor):
         """Dispatch workers if there are open slots and new urls to be scraped."""
-        while self.thread_manager.open_slots:
+        while self.thread_manager.open_slots and not self.max_depth.should_block:
             url = self.url_manager.get_uncrawled()
             if url:
                 self.thread_manager.add_future(executor.submit(self._handle_page, url))
