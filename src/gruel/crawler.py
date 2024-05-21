@@ -420,7 +420,6 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
             self.logger.info(f"{self.thread_manager.open_slots=}")
             url = self.url_manager.get_uncrawled()
             if url:
-                self.logger.info(f"Adding `{url}` to the crawl queue.")
                 self.thread_manager.add_future(executor.submit(self._handle_page, url))
             else:
                 break
