@@ -485,6 +485,7 @@ class SeleniumCrawler(Crawler):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.thread_manager = ThreadManager(1)
+        self.max_depth.thread_manager = self.thread_manager
         self.user = User(True)
 
     @override
