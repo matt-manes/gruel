@@ -1,5 +1,16 @@
 # Changelog
 
+## v4.1.2 (2024-05-21)
+
+#### Performance improvements
+
+* update progress bar after crawl is finished or limits are exceeded
+* better prevent running workers from exceeding max depth
+
+#### Refactorings
+
+* add additional properties to `ThreadManager`
+
 ## v4.1.1 (2024-05-21)
 
 #### Fixes
