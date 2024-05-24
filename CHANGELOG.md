@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.2.0 (2024-05-24)
+
+#### Refactorings
+
+* POTENTIALLY BREAKING remove optional arg for showing prog bar during item parsing and instead make it a `ParserMixin` property
+
 ## v4.1.2 (2024-05-21)
 
 #### Performance improvements
