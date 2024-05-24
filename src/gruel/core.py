@@ -115,6 +115,35 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
         """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
+    def _fetch_and_parse(self, parse_items_prog_bar_display: bool = False):
+        """Fetch source content and pass to parsing workflow."""
+        try:
+            source = self.get_source()
+        except Exception as e:
+            self.logger.exception(f"Error getting source data.")
+        else:
+            self._parse_source(source, parse_items_prog_bar_display)
+
+    def _parse_source(self, source: Any, parse_items_prog_bar_display: bool = False):
+        """
+        Run the parsing workflow and handle errors.
+        """
+        try:
+            self.parsable_items = self.get_parsable_items(source)
+            self.logger.info(
+                f"{self.name}:get_parsable_items() returned {len(self.parsable_items)} items."
+            )
+        except Exception:
+            self.failed_to_get_parsable_items = True
+            self.logger.exception(f"Error in {self.name}:get_parsable_items().")
+        else:
+            self.parsed_items = self.parse_items(
+                self.parsable_items, parse_items_prog_bar_display
+            )
+            self.logger.info(
+                f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
+            )
+
     @abc.abstractmethod
     def get_source(self) -> Any:
         """Should fetch and return the raw data to be scraped.
@@ -183,26 +212,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
             self.timer.start()
             self.logger.info("Scrape started.")
             self.prescrape_chores()
-            try:
-                source = self.get_source()
-            except Exception as e:
-                self.logger.exception(f"Error getting source data.")
-            else:
-                try:
-                    self.parsable_items = self.get_parsable_items(source)
-                    self.logger.info(
-                        f"{self.name}:get_parsable_items() returned {len(self.parsable_items)} items."
-                    )
-                except Exception:
-                    self.failed_to_get_parsable_items = True
-                    self.logger.exception(f"Error in {self.name}:get_parsable_items().")
-                else:
-                    self.parsed_items = self.parse_items(
-                        self.parsable_items, parse_items_prog_bar_display
-                    )
-                    self.logger.info(
-                        f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
-                    )
+            self._fetch_and_parse(parse_items_prog_bar_display)
             self.store_items(self.parsed_items)
         except Exception:
             self.unexpected_failure_occured = True
