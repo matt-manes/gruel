@@ -120,9 +120,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -316,7 +316,7 @@ class CrawlScraper(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMi
             # Since likely usage is multithreaded,
             # don't want to pull from shared `self.parsed_items` container
             # when storing items
-            parsed_items = self.parse_items(parsable_items, False)
+            parsed_items = self.parse_items(parsable_items)
             for item in parsed_items:
                 self.parsed_items.append(item)
             self.store_items(parsed_items)

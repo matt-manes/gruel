@@ -30,6 +30,15 @@ class ParserMixin(abc.ABC):
     def __init__(self):
         super().__init__()
         self.flush_items()
+        self._show_parse_items_prog_bar = False
+
+    @property
+    def show_parse_items_prog_bar(self) -> bool:
+        return self._show_parse_items_prog_bar
+
+    @show_parse_items_prog_bar.setter
+    def show_parse_items_prog_bar(self, should_show: bool):
+        self._show_parse_items_prog_bar = should_show
 
     def flush_items(self):
         """Flush `parsable_items` and `parsed_items`."""
@@ -66,12 +75,10 @@ class ParserMixin(abc.ABC):
         """
         return self.parse_item(item)
 
-    def parse_items(
-        self, parsable_items: Sequence[Any], show_progress: bool
-    ) -> list[Any]:
+    def parse_items(self, parsable_items: Sequence[Any]) -> list[Any]:
         """Parse items and return them."""
         parsed_items: list[Any] = []
-        for item in track(parsable_items, disable=not show_progress):
+        for item in track(parsable_items, disable=not self.show_parse_items_prog_bar):
             parsed_item = self.parse_item_wrapper(item)
             parsed_items.append(parsed_item)
         return parsed_items
@@ -99,7 +106,12 @@ class ScraperMetricsMixin:
 
 
 class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
-    def __init__(self, name: str | None = None, log_dir: Pathish = "logs"):
+    def __init__(
+        self,
+        name: str | None = None,
+        log_dir: Pathish = "logs",
+        show_parse_items_prog_bar: bool = False,
+    ):
         """
         :params:
         * `name`: The name of this scraper. If `None`, the name will be the stem of the file this class/subclass was defined in.
@@ -109,22 +121,23 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
         super().__init__()
         self._name = name
         self.init_logger(self.name, log_dir)
+        self.show_parse_items_prog_bar = show_parse_items_prog_bar
 
     @property
     def name(self) -> str:
         """Returns the name given to __init__ or the stem of the file this instance was defined in if one wasn't given."""
         return self._name or Pathier(inspect.getsourcefile(type(self))).stem  # type: ignore
 
-    def _fetch_and_parse(self, parse_items_prog_bar_display: bool = False):
+    def _fetch_and_parse(self):
         """Fetch source content and pass to parsing workflow."""
         try:
             source = self.get_source()
         except Exception as e:
             self.logger.exception(f"Error getting source data.")
         else:
-            self._parse_source(source, parse_items_prog_bar_display)
+            self._parse_source(source)
 
-    def _parse_source(self, source: Any, parse_items_prog_bar_display: bool = False):
+    def _parse_source(self, source: Any):
         """
         Run the parsing workflow and handle errors.
         """
@@ -137,9 +150,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
             self.failed_to_get_parsable_items = True
             self.logger.exception(f"Error in {self.name}:get_parsable_items().")
         else:
-            self.parsed_items = self.parse_items(
-                self.parsable_items, parse_items_prog_bar_display
-            )
+            self.parsed_items = self.parse_items(self.parsable_items)
             self.logger.info(
                 f"Scrape completed in {self.timer.elapsed_str} with {self.success_count} successes and {self.fail_count} failures."
             )
@@ -201,7 +212,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
         kwargs["logger"] = self.logger
         return request(*args, **kwargs)
 
-    def scrape(self, parse_items_prog_bar_display: bool = False):
+    def scrape(self):
         """Run the scraper:
         1. prescrape chores
         2. get parsable items
@@ -212,7 +223,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
             self.timer.start()
             self.logger.info("Scrape started.")
             self.prescrape_chores()
-            self._fetch_and_parse(parse_items_prog_bar_display)
+            self._fetch_and_parse()
             self.store_items(self.parsed_items)
         except Exception:
             self.unexpected_failure_occured = True
