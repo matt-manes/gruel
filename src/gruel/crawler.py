@@ -120,9 +120,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -350,8 +350,8 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         Create a `Crawler` instance.
 
         #### :params:
-        * `scraper`: An optional `CrawlScraper` or child instance to implement what happens for each crawled page.
-        (NOTE: The `scraper` instance will have its logger set to this crawler's logger.)
+        * `scraper`: An optional list of `CrawlScraper` or child instances to implement what happens for each crawled page.
+        (NOTE: The `scraper` instances will have its logger set to this crawler's logger.)
         * `max_depth`: The maximum number of pages to crawl.
         * `max_time`: The maximum amount of time to crawl in seconds.
         * `log_name`: The file stem for the log file. Defaults to this instance's class name.
