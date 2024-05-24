@@ -417,7 +417,6 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     def _dispatch_workers(self, executor: ThreadPoolExecutor):
         """Dispatch workers if there are open slots and new urls to be scraped."""
         while self.thread_manager.open_slots and not self.max_depth.should_block:
-            self.logger.info(f"{self.thread_manager.open_slots=}")
             url = self.url_manager.get_uncrawled()
             if url:
                 self.thread_manager.add_future(executor.submit(self._handle_page, url))
