@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.2.1 (2024-05-24)
+
+#### Refactorings
+
+* add `headless` init arg to `SeleniumCrawler`
+
 ## v4.2.0 (2024-05-24)
 
 #### Refactorings
