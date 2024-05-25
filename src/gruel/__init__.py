@@ -10,7 +10,7 @@ from .crawler import (
 )
 from .requests import Response, Session, request, retry_on_codes
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 __all__ = [
     "Brewer",
     "GruelFinder",
