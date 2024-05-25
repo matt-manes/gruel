@@ -513,11 +513,28 @@ class SeleniumCrawler(Crawler):
     """
 
     @override
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self.thread_manager = ThreadManager(1)
-        self.max_depth.thread_manager = self.thread_manager
-        self.user = User(True)
+    def __init__(
+        self,
+        scrapers: Sequence[CrawlScraper] = [],
+        max_depth: int | None = None,
+        max_time: float | None = None,
+        log_name: str | int | loggi.LogName = loggi.LogName.CLASSNAME,
+        log_dir: Pathish = "logs",
+        same_site_only: bool = True,
+        custom_url_manager: UrlManager | None = None,
+        headless: bool = True,
+    ):
+        super().__init__(
+            scrapers,
+            max_depth,
+            max_time,
+            log_name,
+            log_dir,
+            1,
+            same_site_only,
+            custom_url_manager,
+        )
+        self.user = User(headless)
 
     @override
     def request_page(self, url: str) -> SeleniumResponse:
