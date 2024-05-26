@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.2.2 (2024-05-26)
+
+#### Refactorings
+
+* add `download_dir` arg to `SeleniumCrawler()`
+
 ## v4.2.1 (2024-05-24)
 
 #### Refactorings
