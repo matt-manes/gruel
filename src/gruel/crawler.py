@@ -120,9 +120,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -523,6 +523,7 @@ class SeleniumCrawler(Crawler):
         same_site_only: bool = True,
         custom_url_manager: UrlManager | None = None,
         headless: bool = True,
+        download_dir: Pathish | None = None,
     ):
         super().__init__(
             scrapers,
@@ -534,7 +535,9 @@ class SeleniumCrawler(Crawler):
             same_site_only,
             custom_url_manager,
         )
-        self.user = User(headless)
+        if download_dir:
+            download_dir = Pathier(download_dir)
+        self.user = User(headless, download_dir=Pathier(download_dir) if download_dir else None)  # type: ignore
 
     @override
     def request_page(self, url: str) -> SeleniumResponse:
