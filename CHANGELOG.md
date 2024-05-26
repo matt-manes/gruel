@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.3.0 (2024-05-26)
+
+#### New Features
+
+* add property to store if crawler was intentionally interupted
+
 ## v4.2.2 (2024-05-26)
 
 #### Refactorings
