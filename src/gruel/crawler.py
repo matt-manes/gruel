@@ -120,9 +120,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -368,6 +368,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         self.max_depth = MaxDepthLimit(max_depth, self.thread_manager)
         self.same_site_only = same_site_only
         self._scrapers: list[CrawlScraper] = []
+        self._was_cancelled = False
         for scraper in scrapers:
             self.register_scraper(scraper)
 
@@ -413,6 +414,11 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     def starting_url(self) -> str:
         """The starting url of the last crawl."""
         return self._starting_url
+
+    @property
+    def was_cancelled(self) -> bool:
+        """Returns if this crawler was intentionally terminated (e.g. keyboard interrupt)."""
+        return self._was_cancelled
 
     def _dispatch_workers(self, executor: ThreadPoolExecutor):
         """Dispatch workers if there are open slots and new urls to be scraped."""
@@ -464,8 +470,11 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
                     self._update_progress(progress, crawler)
                 self.print_exceeded_limits()
             except KeyboardInterrupt:
-                self.thread_manager.shutdown()
+                self._was_cancelled = True
             except Exception as e:
+                print(str(e))
+                self.thread_manager.shutdown()
+                self.logger.close()
                 raise e
             self.thread_manager.shutdown()
         self.postscrape_chores()
