@@ -1,10 +1,8 @@
 import abc
 import time
-import urllib.parse
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
-from functools import lru_cache
 
 import loggi
 import scrapetools
@@ -17,6 +15,7 @@ from seleniumuser.seleniumuser import User
 from typing_extensions import Any, Callable, Sequence, override
 
 from .core import ChoresMixin, ParserMixin, ScraperMetricsMixin
+from .models import Url
 from .requests import Response, SeleniumResponse, request
 
 root = Pathier(__file__).parent
@@ -120,9 +119,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -134,15 +133,15 @@ class UrlManager:
     """Manages crawled and uncrawled urls."""
 
     def __init__(self):
-        self._crawled: deque[str] = deque()
-        self._uncrawled: deque[str] = deque()
+        self._crawled: deque[Url] = deque()
+        self._uncrawled: deque[Url] = deque()
         # Separate lists for schemeless urls so we don't have to restrip the whole list
         # everytime we check if a url is already in the list
-        self._schemeless: deque[str] = deque()
-        self._schemeless_crawled: deque[str] = deque()
+        self._schemeless: deque[Url] = deque()
+        self._schemeless_crawled: deque[Url] = deque()
 
     @property
-    def crawled(self) -> deque[str]:
+    def crawled(self) -> deque[Url]:
         """Urls that have been or are currently being crawled."""
         return self._crawled
 
@@ -152,48 +151,46 @@ class UrlManager:
         return len(self._schemeless)
 
     @property
-    def uncrawled(self) -> deque[str]:
+    def uncrawled(self) -> deque[Url]:
         """Urls that have yet to be crawled."""
         return self._uncrawled
 
-    def add_urls(self, urls: Sequence[str]):
+    def add_urls(self, urls: Sequence[Url]):
         """Append `urls` to `self.uncrawled_urls`."""
         for url in urls:
             self._uncrawled.append(url)
 
-    def filter_urls(self, urls: Sequence[str]) -> deque[str]:
-        """Filters out duplicate urls and urls already in crawled or uncrawled."""
-        filtered_urls: deque[str] = deque()
+    def filter_urls(self, urls: Sequence[Url]) -> deque[Url]:
+        """
+        Filters out:
+          * duplicate urls
+          * already crawled urls
+          * urls with schemes other than `http` and `https`
+        """
+        filtered_urls: deque[Url] = deque()
         for url in set(urls):
-            url = url.strip("/")
+            if not url.scheme.startswith("http"):
+                continue
             # Prevents duplicates where only diff is http vs https
-            schemeless_url = self.strip_scheme(url)
+            schemeless_url = url.schemeless
             if schemeless_url not in self._schemeless:
                 self._schemeless.append(schemeless_url)
                 filtered_urls.append(url)
         return filtered_urls
 
-    def get_uncrawled(self) -> str | None:
+    def get_uncrawled(self) -> Url | None:
         """Get an uncrawled url from the front of the list.
 
         Returns `None` if uncrawled list is empty."""
         while self._uncrawled:
             url = self._uncrawled.popleft()
-            schemeless_url = self.strip_scheme(url)
+            schemeless_url = url.schemeless
             # double check url hasn't been crawled (cause threading)
             if schemeless_url not in self._schemeless_crawled:
                 self._schemeless_crawled.append(schemeless_url)
                 self._crawled.append(url)
                 return url
         return None
-
-    @lru_cache(None)
-    def strip_scheme(self, url: str) -> str:
-        """Remove the scheme from `url`."""
-        parts = urllib.parse.urlsplit(url)
-        return urllib.parse.urlunsplit(
-            ["", parts.netloc, parts.path, parts.query, parts.fragment]
-        )
 
 
 class CrawlLimit(abc.ABC):
@@ -411,7 +408,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         self._scrapers.append(scraper)
 
     @property
-    def starting_url(self) -> str:
+    def starting_url(self) -> Url:
         """The starting url of the last crawl."""
         return self._starting_url
 
@@ -429,7 +426,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
             else:
                 break
 
-    def _handle_page(self, url: str):
+    def _handle_page(self, url: Url):
         self.logger.info(f"Scraping `{url}`.")
         response = self.request_page(url)
         urls = self.extract_crawlable_urls(response.get_linkscraper())
@@ -456,8 +453,8 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
 
     def crawl(self, starting_url: str):
         """Start crawling at `starting_url`."""
-        self._starting_url = starting_url
-        self.url_manager.add_urls([starting_url])
+        self._starting_url = Url(starting_url)
+        self.url_manager.add_urls([self._starting_url])
         self.prescrape_chores()
         with ThreadPoolExecutor(self.thread_manager.max_workers) as executor:
             try:
@@ -480,13 +477,16 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         self.postscrape_chores()
         self.logger.close()
 
-    def extract_crawlable_urls(self, linkscraper: scrapetools.LinkScraper) -> list[str]:
+    def extract_crawlable_urls(self, linkscraper: scrapetools.LinkScraper) -> list[Url]:
         """Returns a list of urls that can be added to the crawl list."""
-        return linkscraper.get_links(
-            "page",
-            excluded_links=linkscraper.get_links("img"),
-            same_site_only=self.same_site_only,
-        )
+        return [
+            Url(link).fragmentless
+            for link in linkscraper.get_links(
+                "page",
+                excluded_links=linkscraper.get_links("img"),
+                same_site_only=self.same_site_only,
+            )
+        ]
 
     @override
     def postscrape_chores(self):
@@ -509,9 +509,9 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
             f"Starting crawl ({color_map.go1}{start_time}[/]) at {color_map.or_}{self.starting_url}"
         )
 
-    def request_page(self, url: str) -> Response:
+    def request_page(self, url: Url) -> Response:
         """Make a request to `url` and return the page."""
-        return request(url, logger=self.logger)
+        return request(url.address, logger=self.logger)
 
 
 class SeleniumCrawler(Crawler):
@@ -549,8 +549,8 @@ class SeleniumCrawler(Crawler):
         self.user = User(headless, download_dir=Pathier(download_dir) if download_dir else None)  # type: ignore
 
     @override
-    def request_page(self, url: str) -> SeleniumResponse:
-        self.user.get(url)
+    def request_page(self, url: Url) -> SeleniumResponse:
+        self.user.get(url.address)
         return SeleniumResponse.from_selenium_user(self.user)
 
     @override
