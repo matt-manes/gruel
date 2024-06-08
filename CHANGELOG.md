@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.4.0 (2024-06-08)
+
+#### New Features
+
+* implement `Url` model
+
+#### Performance improvements
+
+* strip fragments from extracted urls
+
 ## v4.3.0 (2024-05-26)
 
 #### New Features
