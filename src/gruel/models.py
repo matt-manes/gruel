@@ -92,6 +92,15 @@ class Url:
         """Returns a `Url` with no scheme."""
         return self._from_parts("", self.netloc, self.path, self.query, self.fragment)
 
+    def is_same_site(self, other: Self) -> bool:
+        """Returns `True` if `other` appears to be the same website/host."""
+        netloc1 = self.netloc.removeprefix("www.")
+        netloc2 = other.netloc.removeprefix("www.")
+        # Account for one being a subdomain of the other
+        if len(netloc1) < len(netloc2):
+            return netloc1 in netloc2
+        return netloc2 in netloc1
+
     def __str__(self) -> str:
         return self.address
 

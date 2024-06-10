@@ -64,3 +64,18 @@ def test__Url__hash__():
     url2 = models.Url(raw_url)
     url2.netloc = "anotherwebsite.org"
     url_dict = {url1: 1, url2: 2}
+
+
+def test__Url_is_same_site():
+    url1 = models.Url(raw_url)
+    url2 = models.Url(raw_url)
+    assert url1.is_same_site(url2)
+    url2.netloc = "anotherwebsite.org"
+    assert not url1.is_same_site(url2)
+    url2 = models.Url(raw_url)
+    url2.path = "some/other/path"
+    assert url1.is_same_site(url2)
+    url2.netloc = url2.netloc.replace("www", "subdomain")
+    assert url1.is_same_site(url2)
+    url2.netloc = url2.netloc.replace("subdomain.", "")
+    assert url1.is_same_site(url2)
