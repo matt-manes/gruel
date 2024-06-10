@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.4.1 (2024-06-10)
+
+#### Refactorings
+
+* add `is_same_site()` method to `Url` model
+
 ## v4.4.0 (2024-06-08)
 
 #### New Features
