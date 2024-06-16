@@ -119,9 +119,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[[list[Future[Any]]], str] = (
-                lambda n: f"[pink1]{len(n)} running workers..."
-            )
+            num_running: Callable[
+                [list[Future[Any]]], str
+            ] = lambda n: f"[pink1]{len(n)} running workers..."
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
