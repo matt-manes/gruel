@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.4.2 (2024-06-16)
+
+#### Fixes
+
+* fix non-same site urls getting crawled when `same_site_only` is set to `True`
+
 ## v4.4.1 (2024-06-10)
 
 #### Refactorings
