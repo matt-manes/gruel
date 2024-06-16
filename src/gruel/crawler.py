@@ -119,9 +119,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -479,7 +479,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
 
     def extract_crawlable_urls(self, linkscraper: scrapetools.LinkScraper) -> list[Url]:
         """Returns a list of urls that can be added to the crawl list."""
-        return [
+        urls = [
             Url(link).fragmentless
             for link in linkscraper.get_links(
                 "page",
@@ -487,6 +487,9 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
                 same_site_only=self.same_site_only,
             )
         ]
+        if self.same_site_only:
+            urls = [url for url in urls if self.starting_url.is_same_site(url)]
+        return urls
 
     @override
     def postscrape_chores(self):
