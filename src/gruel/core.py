@@ -106,6 +106,30 @@ class ScraperMetricsMixin:
 
 
 class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
+    """
+    Primary base class for building scrapers.
+
+    Inheriting classes must implement the following abstract methods:
+        * `def get_source(self) -> Any` (Retrieve source material to be parsed, typically a request response)
+        * `def get_parsable_items(self, source: Any) -> list[Any]` (Return a list of parsable sub-chunks from `source`, e.g. days from a calendar page)
+        * `def parse_item(self, item: Any) -> Any` (Extract and return desired data from sub-chunk, e.g. populating and returning a model from a `BeautifulSoup` object)
+        * `def store_items(self, items: Sequence[Any]) -> None` (How parsed items should be saved, e.g. storing parsed items in a database)
+
+    Optionally, inheriting classes may override:
+        * `def prescrape_chores(self)` (Anything that should be done prior to scraping)
+        * `def postscrape_chores(self)` (Anything that should be done after scraping)
+        * `def parse_item_wrapper(self, item: Any) -> Any`
+
+        Default behavior of `parse_item_wrapper` is to call `self.parse_item(item)`.
+
+        If no exception is raised, `self.success_count` is incremented and the parsed item is returned.
+
+        If an exception occurs, it is logged, `self.fail_count` is incremented, and `None` is returned.
+
+        NOTE: Returning `None` means `self.parsable_items` and `self.parsed_items` will be equal length
+        and `self.store_items()` should handle possible `None` arguments.
+    """
+
     def __init__(
         self,
         name: str | None = None,
