@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.4.3 (2024-07-16)
+
+#### Docs
+
+* add docstring to `Gruel`
+
 ## v4.4.2 (2024-06-16)
 
 #### Fixes
