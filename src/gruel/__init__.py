@@ -11,7 +11,7 @@ from .crawler import (
 from .models import Url
 from .requests import Response, Session, request, retry_on_codes
 
-__version__ = "4.4.3"
+__version__ = "4.5.0"
 __all__ = [
     "Brewer",
     "GruelFinder",
