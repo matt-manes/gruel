@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.5.0 (2024-07-23)
+
+#### Refactorings
+
+* add explicity `randomize_useragent` param to `request`
+
 ## v4.4.3 (2024-07-16)
 
 #### Docs
