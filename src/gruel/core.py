@@ -207,6 +207,7 @@ class Gruel(ParserMixin, ScraperMetricsMixin, loggi.LoggerMixin, ChoresMixin):
         `url`: URL for the new :class:`Request` object.
         `method`: method for the new :class:`Request` object: ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
 
+        * `randomize_useragent`: Whether to randomize the useragent or not. If False, the default will be used unless supplied with `headers`.
         * `retry_count`: The number of times to retry a failed request.
         * `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
         * `retry_on_codes`: List of status codes to retry requests on. Default is `[408, 413, 444, 499, 500, 502, 503, 504]`.

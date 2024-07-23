@@ -159,6 +159,7 @@ class Session(requests.Session):
 def request(
     url: str,
     method: str = "get",
+    randomize_useragent: bool = True,
     retry_count: int = 3,
     retry_backoff_factor: float = 0.1,
     retry_on_codes: list[int] = retry_on_codes,
@@ -172,10 +173,11 @@ def request(
     `url`: URL for the new :class:`Request` object.
     `method`: method for the new :class:`Request` object: ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
 
+    * `randomize_useragent`: Whether to randomize the useragent or not. If False, the default will be used unless supplied with `headers`.
     * `retry_count`: The number of times to retry a failed request.
     * `retry_backoff_factor`: For each failed request, the time before retrying will be `retry_backoff_factor * (2 ** retry_number)`
-    * `logger`: A logging instance to use.
     * `retry_on_codes`: List of status codes to retry requests on. Default is `[408, 413, 444, 499, 500, 502, 503, 504]`.
+    * `logger`: A logging instance to use.
 
     `params`: dict, list of tuples or bytes to send in the query string for the :class:`Request`.
     `data`: dict, list of tuples, bytes, or file-like object to send in the body of the :class:`Request`.
@@ -200,9 +202,10 @@ def request(
     `cert`: if String, path to ssl client cert file (.pem). If Tuple, ('cert', 'key') pair.
     """
     with Session(
+        randomize_useragent=randomize_useragent,
         retry_count=retry_count,
         retry_backoff_factor=retry_backoff_factor,
-        logger=logger,
         retry_on_codes=retry_on_codes,
+        logger=logger,
     ) as session:
         return session.request(method, url, *args, **kwargs)
