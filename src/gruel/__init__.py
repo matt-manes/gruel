@@ -10,6 +10,7 @@ from .crawler import (
 )
 from .models import Url
 from .requests import Response, Session, request, retry_on_codes
+from .soupstrainer import MissingElementError, SoupStrainer, Specifier
 
 __version__ = "4.5.0"
 __all__ = [
@@ -30,4 +31,7 @@ __all__ = [
     "LimitCheckerMixin",
     "SeleniumCrawler",
     "Url",
+    "Specifier",
+    "MissingElementError",
+    "SoupStrainer",
 ]
