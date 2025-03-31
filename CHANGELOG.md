@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.6.0 (2025-03-31)
+
+#### Performance improvements
+
+* wrap url manager in a semaphore and change most deques to sets
+
 ## v4.5.0 (2024-07-23)
 
 #### Refactorings
