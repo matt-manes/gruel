@@ -3,6 +3,7 @@ import time
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
+from threading import BoundedSemaphore
 
 import loggi
 import scrapetools
@@ -119,9 +120,9 @@ class ThreadManager:
             console.print(
                 f"{color_map.c}Waiting for {color_map.sg2}{len(running_workers)}[/] workers to finish..."
             )
-            num_running: Callable[
-                [list[Future[Any]]], str
-            ] = lambda n: f"[pink1]{len(n)} running workers..."
+            num_running: Callable[[list[Future[Any]]], str] = (
+                lambda n: f"[pink1]{len(n)} running workers..."
+            )
             with Console().status(
                 num_running(running_workers), spinner="arc", spinner_style="deep_pink1"
             ) as c:
@@ -133,15 +134,15 @@ class UrlManager:
     """Manages crawled and uncrawled urls."""
 
     def __init__(self):
-        self._crawled: deque[Url] = deque()
+        self._crawled: set[Url] = set()  # deque[Url] = deque()
         self._uncrawled: deque[Url] = deque()
         # Separate lists for schemeless urls so we don't have to restrip the whole list
         # everytime we check if a url is already in the list
-        self._schemeless: deque[Url] = deque()
-        self._schemeless_crawled: deque[Url] = deque()
+        self._schemeless: set[Url] = set()  # deque[Url] = deque()
+        self._schemeless_crawled: set[Url] = set()  # deque[Url] = deque()
 
     @property
-    def crawled(self) -> deque[Url]:
+    def crawled(self) -> set[Url]:
         """Urls that have been or are currently being crawled."""
         return self._crawled
 
@@ -174,7 +175,7 @@ class UrlManager:
             # Prevents duplicates where only diff is http vs https
             schemeless_url = url.schemeless
             if schemeless_url not in self._schemeless:
-                self._schemeless.append(schemeless_url)
+                self._schemeless.add(schemeless_url)
                 filtered_urls.append(url)
         return filtered_urls
 
@@ -182,14 +183,15 @@ class UrlManager:
         """Get an uncrawled url from the front of the list.
 
         Returns `None` if uncrawled list is empty."""
-        while self._uncrawled:
+        # while self._uncrawled:
+        if self._uncrawled:
             url = self._uncrawled.popleft()
-            schemeless_url = url.schemeless
+            # schemeless_url = url.schemeless
             # double check url hasn't been crawled (cause threading)
-            if schemeless_url not in self._schemeless_crawled:
-                self._schemeless_crawled.append(schemeless_url)
-                self._crawled.append(url)
-                return url
+            # if schemeless_url not in self._schemeless_crawled:
+            self._schemeless_crawled.add(url.schemeless)
+            self._crawled.add(url)
+            return url
         return None
 
 
@@ -366,6 +368,7 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         self.same_site_only = same_site_only
         self._scrapers: list[CrawlScraper] = []
         self._was_cancelled = False
+        self.url_manager_lock = BoundedSemaphore()
         for scraper in scrapers:
             self.register_scraper(scraper)
 
@@ -379,9 +382,10 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     @property
     def finished(self) -> bool:
         """Returns `True` if there are no uncrawled urls and no unfinished threads."""
-        return not (
-            self.url_manager.uncrawled or self.thread_manager.unfinished_workers
-        )
+        with self.url_manager_lock:
+            return not (
+                self.url_manager.uncrawled or self.thread_manager.unfinished_workers
+            )
 
     @property
     @override
@@ -420,7 +424,8 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
     def _dispatch_workers(self, executor: ThreadPoolExecutor):
         """Dispatch workers if there are open slots and new urls to be scraped."""
         while self.thread_manager.open_slots and not self.max_depth.should_block:
-            url = self.url_manager.get_uncrawled()
+            with self.url_manager_lock:
+                url = self.url_manager.get_uncrawled()
             if url:
                 self.thread_manager.add_future(executor.submit(self._handle_page, url))
             else:
@@ -430,9 +435,11 @@ class Crawler(loggi.LoggerMixin, ChoresMixin, LimitCheckerMixin):
         self.logger.info(f"Scraping `{url}`.")
         response = self.request_page(url)
         urls = self.extract_crawlable_urls(response.get_linkscraper())
-        new_urls = self.url_manager.filter_urls(urls)
+        with self.url_manager_lock:
+            new_urls = self.url_manager.filter_urls(urls)
         self.logger.info(f"Found {len(new_urls)} new urls on `{url}`.")
-        self.url_manager.add_urls(new_urls)
+        with self.url_manager_lock:
+            self.url_manager.add_urls(new_urls)
         for scraper in self.scrapers:
             scraper.scrape(response)
 
